@@ -1,0 +1,141 @@
+================================================================================
+  FastTable — RESUMEN DE AVANCE Y CONTEXTO DEL PROYECTO
+  (Última actualización coherente con el repositorio; léelo al retomar el trabajo)
+================================================================================
+
+1. QUÉ ES FASTTABLE
+-------------------
+Aplicación móvil (Expo / React Native / TypeScript) para operar un restaurante:
+  • Comensal: mesas, reservas, menú, pedidos a cocina, cuenta estimada, fila
+    virtual, solicitudes de servicio.
+  • Personal de sala (mesero / anfitrión): panel con KPIs, reservas a atender,
+    solicitudes, mesas asignadas, control libre/ocupada.
+  • Cocina: cola de pedidos pendientes; disponibilidad de platos en un
+    "centro de control" (modal), no en la pantalla principal.
+  • Gerencia: pantalla solo de estadísticas (ingresos agregados, plato más
+    pedido, personal activo, platos no disponibles) vía RPC.
+Backend: Supabase (PostgreSQL, Auth, Row Level Security, Realtime, RPC).
+
+
+2. ESTRUCTURA DE CARPETAS (MEMORIA RÁPIDA)
+------------------------------------------
+  app/(tabs)/          → Comensal: index (mesas), menu, queue, etc.
+  app/worker/          → Personal: index (panel sala), kitchen, gerente,
+                         reservations, login.
+  app/                 → login, register, forgot-password, reset-password
+  components/          → reservation-modal, deep-link-bridge (enlaces auth)
+  contexts/            → auth-context (sesión, perfil, personal)
+  hooks/               → use-auth-deep-link, use-supabase-realtime-refresh
+  lib/                 → supabase, mesa-activa, cuenta-comensal, auth-errors,
+                         cocina-errors, worker-reservations-logic, format…
+  scripts/             → crear-cuentas-demo-trabajadores.mjs, ft-staff-console.mjs
+  supabase/            → SQL maestro, parches incrementales, guías .txt
+
+
+3. BASE DE DATOS Y SQL
+-----------------------
+Archivo maestro (instalación desde cero):
+  • supabase/01_reconstruir_db.sql
+    — Esquema, RLS, triggers, RPC, seed demo, publicación Realtime al final.
+
+Parches (bases ya existentes; ejecutar en SQL Editor según necesidad):
+  • patch_mesero_ui.sql          — Mesero: RPC atender reserva completa,
+                                    marcar mesa libre/ocupada, políticas.
+  • patch_cocina_pedidos.sql     — Cocina: pedidos_cocina, RPC cocina, etc.
+  • patch_gerente_stats_y_mesa_hero.sql
+    — Columnas mesas (descripcion_publica, imagen_url) + RPC gerente_dashboard_stats().
+  • patch_realtime_publication.sql
+    — Añade tablas a supabase_realtime para actualización en vivo en la app.
+
+Guías:
+  • supabase/EJECUCION.txt       — Orden recomendado de scripts.
+  • supabase/GUIA_ALTERAR_DB.txt — Cómo alterar la BD con cuidado.
+  • supabase/DEMO_CUENTAS.txt    — Cuentas demo de trabajadores + npm run demo:workers
+
+Si el proyecto Supabase ya existía antes de ciertos cambios, conviene haber
+ejecutado los parches que falten; si reconstruyes solo con 01_reconstruir_db.sql
+reciente, muchos parches ya van integrados al final del script.
+
+
+4. FUNCIONALIDADES IMPLEMENTADAS (AVANCE)
+-----------------------------------------
+Comensal
+  • Reserva de mesa con modal: imagen hero + descripción pública de mesa;
+    debajo fecha/hora, personas, nota (columnas mesas.imagen_url,
+    mesas.descripcion_publica).
+  • Menú con mesa activa (reserva atendida + mesa ocupada); pedidos a cocina.
+  • "Tu cuenta": líneas de pedido del usuario en esa mesa; desaparece cuando
+    la mesa deja de estar ocupada (mesa liberada por el mesero).
+  • Recuperación de contraseña: forgot-password → correo → deep link →
+    reset-password (configurar Redirect URLs en Supabase + scheme fasttable).
+
+Personal
+  • Login trabajador; redirección por rol (cocina → kitchen, gerente → gerente,
+    resto → panel sala).
+  • Panel mesero/anfitrión: KPIs, solicitudes, reservas, mesas, modales.
+  • Cocina: lista "Por preparar"; botón "Centro de control" abre modal con
+    switches de disponibilidad de items_menu (antes estaba todo en scroll).
+  • Gerente: pantalla dedicada con estadísticas (RPC gerente_dashboard_stats).
+  • Pantalla reservas (worker/reservations.tsx) alineada con la lógica de mesas.
+
+Autenticación y errores
+  • Mensajes en español para errores típicos (p. ej. rate limit de email)
+    en lib/auth-errors.ts.
+  • Deep link: use-auth-deep-link + DeepLinkBridge en app/_layout; si type=recovery
+    navega a /reset-password.
+
+Herramientas locales (no van en la app publicada)
+  • npm run demo:workers — Crea usuarios Auth + personal demo (requiere
+    SUPABASE_SERVICE_ROLE_KEY en .env).
+  • npm run staff:console — Consola interactiva (Node) para listar/alta/baja
+    de fichas de personal.
+
+Tiempo real (sin depender solo del pull-to-refresh)
+  • hooks/use-supabase-realtime-refresh.ts suscribe a postgres_changes en las
+    tablas indicadas mientras la pantalla tiene foco (debounce ~400 ms).
+  • Requiere tablas en publicación supabase_realtime (01 o patch_realtime_publication).
+  • Pantallas cableadas: worker index, kitchen, gerente, reservations; comensal
+    index (mesas), menu, queue.
+
+Documentación pública
+  • README.md — Descripción del producto FastTable, IPN, arquitectura, arranque.
+
+
+5. VARIABLES DE ENTORNO
+------------------------
+  • .env (no versionar): EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
+  • Solo local / CI para scripts admin: SUPABASE_SERVICE_ROLE_KEY
+  • Plantilla: .env.example
+
+
+6. GIT / GITHUB
+----------------
+Repositorio remoto habitual: origin → github.com/aletzsc/FastTable (rama main).
+Los commits recientes incluyen: features de personal/cocina/gerente/comensal,
+Realtime, recuperación de contraseña, README, etc. Antes de apagar, puedes
+hacer `git status` y `git pull` al volver.
+
+
+7. COSAS A TENER EN CUENTA AL RETOMAR
+--------------------------------------
+  • Supabase Dashboard: Redirect URLs para recuperación de contraseña y correos.
+  • Si Realtime no actualiza: comprobar que el parche de publicación se ejecutó
+    y que Realtime está habilitado en el proyecto.
+  • Rate limit de Auth en registro: esperar o cambiar red; mensaje amigable en app.
+  • Cuenta del comensal: por RLS solo ve sus propias líneas de pedido; si en el
+    futuro se quisiera "cuenta total de la mesa", haría falta RPC/política nueva.
+  • Gerente "sesión abierta" del equipo: en UI se lista personal activo en BD,
+    no presencia en tiempo real de móviles.
+
+
+8. COMANDOS RÁPIDOS
+-------------------
+  npm install
+  npm start                    → Expo dev server
+  npm run demo:workers         → Cuentas demo trabajadores (con service role)
+  npm run staff:console        → Consola local personal
+
+
+================================================================================
+  Fin del resumen. Conserva este archivo en el repo para no perder el hilo.
+================================================================================
