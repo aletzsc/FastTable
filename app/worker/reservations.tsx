@@ -103,8 +103,8 @@ export default function WorkerReservationsScreen() {
     await load();
   };
 
-  const onAtender = async (id: string) => {
-    const { error } = await supabase.rpc('personal_atender_reserva', { p_id_reserva: id });
+  const onAtenderCompleta = async (id: string) => {
+    const { error } = await supabase.rpc('personal_atender_reserva_completa', { p_id_reserva: id });
     if (error) {
       Alert.alert('Atender', mapStaffRpcError(error.message));
       return;
@@ -142,9 +142,10 @@ export default function WorkerReservationsScreen() {
 
       {loading && !refreshing ? <ActivityIndicator color={FtColors.accent} style={styles.loader} /> : null}
 
-      <Text style={styles.h1}>Ir a atender</Text>
+      <Text style={styles.h1}>Reservas a atender</Text>
       <Text style={styles.sub}>
-        Desde la hora acordada: atender mesa, confirmar llegada o no (tras 5 min desde esa hora).
+        “Atender” confirma llegada, te asigna la mesa y la marca ocupada. Abajo: comensal no llegó (tras la ventana de 5
+        min).
       </Text>
 
       {attend.length === 0 ? (
@@ -155,7 +156,6 @@ export default function WorkerReservationsScreen() {
           const code = t?.codigo ?? '—';
           const guest = names[r.id_usuario]?.trim() || 'Cliente';
           const other = t?.id_personal_atendiendo != null && t.id_personal_atendiendo !== staffMember.id;
-          const mine = t?.id_personal_atendiendo === staffMember.id;
           const showNoShow = canShowNoShow(r, new Date());
 
           return (
@@ -170,14 +170,9 @@ export default function WorkerReservationsScreen() {
                 <Text style={styles.warn}>Otro mesero está atendiendo esta mesa.</Text>
               ) : (
                 <>
-                  <View style={styles.rowBtns}>
-                    <Pressable style={[styles.btnSecondary, mine && styles.btnSecondaryOn]} onPress={() => onAtender(r.id)}>
-                      <Text style={styles.btnSecondaryText}>{mine ? 'Atendiendo' : 'Atender'}</Text>
-                    </Pressable>
-                    <Pressable style={styles.btnOk} onPress={() => resolve(r.id, true)}>
-                      <Text style={styles.btnOkText}>El comensal llegó</Text>
-                    </Pressable>
-                  </View>
+                  <Pressable style={styles.btnOk} onPress={() => onAtenderCompleta(r.id)}>
+                    <Text style={styles.btnOkText}>Atender</Text>
+                  </Pressable>
                   {showNoShow ? (
                     <Pressable style={styles.btnNo} onPress={() => resolve(r.id, false)}>
                       <Text style={styles.btnNoText}>Comensal no llegó</Text>
@@ -247,21 +242,9 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700', color: FtColors.text, marginBottom: 8 },
   line: { fontSize: 14, color: FtColors.textMuted, marginBottom: 4 },
   warn: { fontSize: 13, color: FtColors.warning, marginTop: 8 },
-  rowBtns: { flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap' },
-  btnSecondary: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: FtColors.border,
-    backgroundColor: FtColors.surface,
-  },
-  btnSecondaryOn: { borderColor: FtColors.accent },
-  btnSecondaryText: { fontSize: 14, fontWeight: '600', color: FtColors.text },
   btnOk: {
-    flex: 1,
-    minWidth: 120,
-    paddingVertical: 10,
+    marginTop: 12,
+    paddingVertical: 12,
     borderRadius: 999,
     backgroundColor: FtColors.success,
     alignItems: 'center',

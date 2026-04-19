@@ -48,6 +48,8 @@ export type Database = {
           capacidad: number;
           estado: 'libre' | 'ocupada' | 'reservada';
           notas: string | null;
+          descripcion_publica: string | null;
+          imagen_url: string | null;
           id_personal_atendiendo: string | null;
           actualizado_en: string;
         };
@@ -90,9 +92,23 @@ export type Database = {
           descripcion: string | null;
           precio_centavos: number;
           disponible: boolean;
+          imagen_url: string | null;
           alergenos_json: unknown;
           creado_en: string;
           actualizado_en: string;
+        };
+      };
+      pedidos_cocina: {
+        Row: {
+          id: string;
+          id_mesa: string;
+          id_usuario: string;
+          id_item_menu: string;
+          cantidad: number;
+          nota_cliente: string | null;
+          estado: 'pendiente' | 'listo';
+          creado_en: string;
+          listo_en: string | null;
         };
       };
       solicitudes_servicio: {
@@ -134,6 +150,7 @@ export type Database = {
       estado_solicitud: 'abierta' | 'reconocida' | 'cerrada';
       rol_personal: 'anfitrion' | 'mesero' | 'gerente' | 'cocina';
       ciclo_reserva: 'activa' | 'cancelada' | 'completada';
+      estado_pedido_cocina: 'pendiente' | 'listo';
     };
   };
 };

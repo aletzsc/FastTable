@@ -24,6 +24,8 @@ type Row = {
   capacidad: number;
   estado: EstadoMesa;
   nombreZona: string | null;
+  descripcion_publica: string | null;
+  imagen_url: string | null;
 };
 
 type MyReservation = {
@@ -101,7 +103,7 @@ export default function TablesScreen() {
     setError(null);
     const { data, error: qError } = await supabase
       .from('mesas')
-      .select('id, codigo, capacidad, estado, zonas ( nombre )')
+      .select('id, codigo, capacidad, estado, descripcion_publica, imagen_url, zonas ( nombre )')
       .order('codigo');
     if (qError) {
       setError(qError.message);
@@ -119,6 +121,8 @@ export default function TablesScreen() {
           capacidad: r.capacidad,
           estado: r.estado as EstadoMesa,
           nombreZona,
+          descripcion_publica: r.descripcion_publica ?? null,
+          imagen_url: r.imagen_url ?? null,
         };
       }) ?? [];
     setRows(mapped);
@@ -286,6 +290,10 @@ export default function TablesScreen() {
       <ReservationModal
         visible={reserveTable != null}
         tableCode={reserveTable?.codigo ?? ''}
+        tableHeroImageUrl={reserveTable?.imagen_url}
+        tableDescription={reserveTable?.descripcion_publica}
+        zoneName={reserveTable?.nombreZona}
+        capacity={reserveTable?.capacidad}
         onClose={() => setReserveTable(null)}
         onConfirm={onReserveConfirm}
       />

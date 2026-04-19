@@ -7,6 +7,17 @@ Dónde trabajar
 - Supabase Dashboard → SQL Editor: para INSERT/UPDATE/SELECT con permisos de
   administrador (rol postgres). Las políticas RLS no aplican al rol que usa el
   SQL Editor en modo servicio.
+
+RLS en actualizaciones (parches, 01_reconstruir_db.sql, patch_*.sql)
+-------------------------------------------------------------------
+Ejecuta esos scripts con RLS activado en las tablas (estado normal del proyecto).
+No hace falta desactivar RLS ni hay opción “Run sin RLS” en el editor: el rol del
+SQL Editor puede crear/alterar políticas y datos de mantenimiento sin pasar por
+las mismas reglas que el usuario `authenticated` de la app.
+
+Solo si insertas o lees datos “como cliente” (anon key, usuario de prueba en
+Table Editor sin bypass) te chocarán las políticas; para eso usa el SQL Editor
+o la service role en scripts locales.
 - Authentication → Users: para crear cuentas (correo/contraseña) o ver el
   id (UUID) de cada usuario.
 - Table Editor: útil para ver datos, pero inserts en tablas con RLS pueden
@@ -167,5 +178,7 @@ Añadir valores a otros ENUMs es similar (ALTER TYPE ... ADD VALUE).
   00_borrar_fasttable.sql  → borra objetos FastTable en public (opcional, antes de reinstalar)
   01_reconstruir_db.sql      → instalación completa: esquema + RLS + RPC + datos de ejemplo
   02_enlazar_personal_demo.sql → enlaza los 4 roles demo en public.personal (tras crear usuarios)
+  patch_mesero_ui.sql        → parche incremental (solicitudes por mesero + RPCs mesero); ver EJECUCION.txt
+  patch_cocina_pedidos.sql   → pedidos a cocina, toggles de platos, notificación al mesero
 
 ================================================================================

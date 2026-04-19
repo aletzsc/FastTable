@@ -1,5 +1,17 @@
 FastTable — orden para reconstruir la base en Supabase (SQL Editor)
 
+RLS (Row Level Security) en cada script
+----------------------------------------
+Ejecuta SIEMPRE con RLS activado en las tablas (como está el proyecto). No desactives
+RLS a mano (ALTER TABLE … DISABLE ROW LEVEL SECURITY) salvo que sepas exactamente por qué.
+
+En Supabase → SQL Editor el script corre con privilegios de administración del proyecto:
+CREATE FUNCTION, CREATE POLICY, GRANT, seed, etc. se aplican aunque las tablas tengan RLS.
+No existe un interruptor “con RLS / sin RLS” al pulsar Run: deja las políticas encendidas.
+
+Si insertas datos de prueba como usuario anónimo/authenticated vía cliente o PostgREST,
+ahí sí te afectan las políticas; por eso los scripts de esquema se hacen desde el SQL Editor.
+
 1) (Opcional) 00_borrar_fasttable.sql
    Solo si ya existen tablas/funciones FastTable y quieres limpiar antes.
    No borra auth.users.
@@ -15,5 +27,12 @@ FastTable — orden para reconstruir la base en Supabase (SQL Editor)
 4) 02_enlazar_personal_demo.sql
    Vincula los cuatro roles de personal (anfitrión, mesero, gerente, cocina) a esos usuarios.
    Omitir si demo:workers ya insertó filas en public.personal.
+
+Si la base ya existía antes de abril 2026 y solo quieres las novedades del panel mesero
+(solicitudes filtradas por mesa asignada + RPC atender completa + toggle mesas):
+  → ejecuta también patch_mesero_ui.sql (una vez).
+
+Pedidos a cocina + disponibilidad de platos + pantalla cocinero:
+  → ejecuta patch_cocina_pedidos.sql (una vez, después de tener el resto del esquema FastTable).
 
 Documentación operativa: GUIA_ALTERAR_DB.txt

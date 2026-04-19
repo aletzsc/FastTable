@@ -26,7 +26,9 @@ export default function WorkerLoginScreen() {
   useEffect(() => {
     if (authLoading || !session) return;
     if (staffMember) {
-      router.replace('/worker');
+      if (staffMember.rol === 'cocina') router.replace('/worker/kitchen');
+      else if (staffMember.rol === 'gerente') router.replace('/worker/gerente');
+      else router.replace('/worker');
     }
   }, [authLoading, session, staffMember, router]);
 
@@ -50,7 +52,7 @@ export default function WorkerLoginScreen() {
       }
       const { data: row } = await supabase
         .from('personal')
-        .select('id')
+        .select('id, rol')
         .eq('id_usuario', uid)
         .eq('activo', true)
         .maybeSingle();
@@ -62,7 +64,13 @@ export default function WorkerLoginScreen() {
         );
         return;
       }
-      router.replace('/worker');
+      if (row.rol === 'cocina') {
+        router.replace('/worker/kitchen');
+      } else if (row.rol === 'gerente') {
+        router.replace('/worker/gerente');
+      } else {
+        router.replace('/worker');
+      }
     } finally {
       setBusy(false);
     }

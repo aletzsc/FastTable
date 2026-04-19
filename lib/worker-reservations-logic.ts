@@ -73,5 +73,9 @@ export function mapStaffRpcError(message: string): string {
   if (message.includes('no_tu_mesa')) return 'Esta mesa no está asignada a ti.';
   if (message.includes('solo_reservada_desasignar')) return 'Solo puedes dejar de atender mesas reservadas.';
   if (message.includes('solo_ocupada_liberar')) return 'Solo puedes liberar mesas ocupadas que te correspondan.';
+  if (message.includes('mesa_en_reserva_panel')) return 'Esa mesa está reservada; gestiónala desde reservas.';
+  if (message.includes('solo_libre_a_ocupada')) return 'Solo puedes ocupar mesas libres.';
+  if (message.includes('solo_ocupada_a_libre_toggle')) return 'Solo puedes liberar mesas ocupadas.';
+  if (message.includes('no_tu_mesa_toggle')) return 'Otro mesero tiene asignada esa mesa.';
   return message;
 }

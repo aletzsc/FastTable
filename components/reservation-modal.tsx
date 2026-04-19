@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import DateTimePicker from '@react-native-community/datetimepicker/src/datetimepicker';
 
@@ -19,9 +20,19 @@ import { FtColors } from '@/constants/fasttable';
 type Props = {
   visible: boolean;
   tableCode: string;
+  /** Imagen de cabecera (URL). Si falta, se usa un placeholder. */
+  tableHeroImageUrl?: string | null;
+  /** Texto descriptivo de la mesa para el comensal. */
+  tableDescription?: string | null;
+  zoneName?: string | null;
+  capacity?: number;
   onClose: () => void;
   onConfirm: (scheduledAt: Date, partySize: number, note: string) => Promise<void>;
 };
+
+function placeholderTableImage(code: string): string {
+  return `https://picsum.photos/seed/${encodeURIComponent(code)}-mesa/900/480`;
+}
 
 const minFutureDate = () => {
   const d = new Date();
@@ -29,7 +40,16 @@ const minFutureDate = () => {
   return d;
 };
 
-export function ReservationModal({ visible, tableCode, onClose, onConfirm }: Props) {
+export function ReservationModal({
+  visible,
+  tableCode,
+  tableHeroImageUrl,
+  tableDescription,
+  zoneName,
+  capacity,
+  onClose,
+  onConfirm,
+}: Props) {
   const [when, setWhen] = useState(() => {
     const d = new Date();
     d.setMinutes(d.getMinutes() + 60);
@@ -114,9 +134,26 @@ export function ReservationModal({ visible, tableCode, onClose, onConfirm }: Pro
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}>
+            <Image
+              source={{ uri: tableHeroImageUrl || placeholderTableImage(tableCode) }}
+              style={styles.heroImg}
+              contentFit="cover"
+              transition={200}
+            />
             <Text style={styles.kicker}>Mesa {tableCode}</Text>
             <Text style={styles.title}>Reserva</Text>
-            <Text style={styles.lead}>Confirma hora y tamaño del grupo.</Text>
+            {zoneName != null || capacity != null ? (
+              <Text style={styles.metaLine}>
+                {[zoneName, capacity != null ? `${capacity} plazas` : null].filter(Boolean).join(' · ')}
+              </Text>
+            ) : null}
+            <Text style={styles.desc}>
+              {tableDescription?.trim() ||
+                'Descripción de la mesa: podrás personalizarla desde el panel del restaurante.'}
+            </Text>
+
+            <Text style={styles.sectionLabel}>Datos de la reserva</Text>
+            <Text style={styles.lead}>Elige fecha, hora y tamaño del grupo.</Text>
 
             <Text style={styles.label}>Fecha y hora</Text>
             {Platform.OS === 'ios' ? (
@@ -236,6 +273,13 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: Platform.OS === 'ios' ? 40 : 32,
   },
+  heroImg: {
+    width: '100%',
+    height: 180,
+    borderRadius: 14,
+    marginBottom: 16,
+    backgroundColor: '#1a1612',
+  },
   kicker: {
     fontSize: 11,
     letterSpacing: 2,
@@ -248,6 +292,20 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     color: FtColors.text,
     letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  metaLine: { fontSize: 13, color: FtColors.textFaint, marginBottom: 10 },
+  desc: {
+    fontSize: 14,
+    color: FtColors.textMuted,
+    lineHeight: 22,
+    marginBottom: 22,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: FtColors.accentMuted,
     marginBottom: 6,
   },
   lead: {
