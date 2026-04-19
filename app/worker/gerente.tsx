@@ -16,6 +16,7 @@ import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
 import { FtColors } from '@/constants/fasttable';
+import { REALTIME_GERENTE, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { formatPriceFromCents } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 
@@ -53,13 +54,16 @@ export default function GerenteScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
     const { data, error } = await supabase.rpc('gerente_dashboard_stats');
     if (error) {
-      if (error.message.includes('solo_gerente')) {
-        Alert.alert('Acceso', 'Solo el gerente puede ver este panel.');
-      } else {
-        Alert.alert('Panel', error.message);
+      if (!silent) {
+        if (error.message.includes('solo_gerente')) {
+          Alert.alert('Acceso', 'Solo el gerente puede ver este panel.');
+        } else {
+          Alert.alert('Panel', error.message);
+        }
       }
       setStats(null);
       return;
@@ -86,6 +90,14 @@ export default function GerenteScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  const reloadRealtime = useCallback(() => load({ silent: true }), [load]);
+
+  useSupabaseRealtimeRefresh(
+    REALTIME_GERENTE,
+    reloadRealtime,
+    !!session && !!staffMember && staffMember.rol === 'gerente',
+  );
 
   if (authLoading) {
     return (
@@ -118,7 +130,7 @@ export default function GerenteScreen() {
         <View style={styles.hero}>
           <Text style={styles.heroEyebrow}>Gerencia</Text>
           <Text style={styles.heroTitle}>{staffMember.nombre_visible}</Text>
-          <Text style={styles.heroSub}>Indicadores del restaurante (actualiza para ver datos nuevos).</Text>
+          <Text style={styles.heroSub}>Indicadores del restaurante (se actualizan solos al cambiar pedidos o la carta).</Text>
         </View>
 
         {loading && !refreshing ? <ActivityIndicator color={FtColors.accent} style={styles.loader} /> : null}

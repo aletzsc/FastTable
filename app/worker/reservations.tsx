@@ -20,6 +20,7 @@ import {
   splitReservationsByTime,
   type ReservaStaffRow,
 } from '@/lib/worker-reservations-logic';
+import { REALTIME_WORKER_RESERVATIONS, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { supabase } from '@/lib/supabase';
 
 function fmt(d: string) {
@@ -90,6 +91,12 @@ export default function WorkerReservationsScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  useSupabaseRealtimeRefresh(
+    REALTIME_WORKER_RESERVATIONS,
+    load,
+    !!session && !!staffMember && (staffMember.rol === 'mesero' || staffMember.rol === 'anfitrion'),
+  );
 
   const resolve = async (id: string, arrived: boolean) => {
     const { error } = await supabase.rpc('personal_resolver_reserva', {

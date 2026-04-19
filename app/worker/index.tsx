@@ -24,6 +24,7 @@ import {
   splitReservationsByTime,
   type ReservaStaffRow,
 } from '@/lib/worker-reservations-logic';
+import { REALTIME_WORKER_DASHBOARD, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { supabase } from '@/lib/supabase';
 
 function roleLabel(role: string): string {
@@ -174,6 +175,14 @@ export default function WorkerDashboardScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  useSupabaseRealtimeRefresh(
+    REALTIME_WORKER_DASHBOARD,
+    load,
+    !!session &&
+      !!staffMember &&
+      (staffMember.rol === 'mesero' || staffMember.rol === 'anfitrion'),
+  );
 
   const { upcoming, attend } = useMemo(() => splitReservationsByTime(reservas, new Date()), [reservas]);
 

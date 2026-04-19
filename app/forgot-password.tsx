@@ -11,32 +11,38 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 
 import { FtColors } from '@/constants/fasttable';
 import { formatAuthErrorMessage } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
   const onSubmit = async () => {
     const e = email.trim().toLowerCase();
-    if (!e || !password) {
-      Alert.alert('Faltan datos', 'Introduce correo y contraseña.');
+    if (!e || !e.includes('@')) {
+      Alert.alert('Correo', 'Introduce un correo válido.');
       return;
     }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: e, password });
+      const redirectTo = Linking.createURL('/reset-password');
+      const { error } = await supabase.auth.resetPasswordForEmail(e, { redirectTo });
       if (error) {
-        Alert.alert('No se pudo iniciar sesión', formatAuthErrorMessage(error.message));
+        Alert.alert('Recuperación', formatAuthErrorMessage(error.message));
         return;
       }
-      router.replace('/');
+      Alert.alert(
+        'Revisa tu correo',
+        'Si existe una cuenta con ese correo, te enviamos un enlace para elegir una nueva contraseña. ' +
+          'Abre el enlace en este dispositivo (misma app FastTable).',
+        [{ text: 'Entendido', onPress: () => router.back() }],
+      );
     } finally {
       setBusy(false);
     }
@@ -48,7 +54,10 @@ export default function LoginScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <Text style={styles.lead}>Introduce el correo y la contraseña de tu cuenta.</Text>
+          <Text style={styles.lead}>
+            Te enviaremos un enlace para restablecer la contraseña. Sirve para comensales y para trabajadores
+            (mismo inicio de sesión).
+          </Text>
 
           <View style={styles.field}>
             <Text style={styles.label}>Correo electrónico</Text>
@@ -64,27 +73,16 @@ export default function LoginScreen() {
             />
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Contraseña</Text>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={FtColors.textMuted}
-              secureTextEntry
-              style={styles.input}
-            />
-          </View>
+          <Text style={styles.hint}>
+            En Supabase → Authentication → URL configuration, añade como URL de redirección permitida la que usa
+            esta app (por ejemplo fasttable://… al abrir el enlace en el móvil).
+          </Text>
 
           <Pressable
             style={[styles.primaryBtn, busy && styles.primaryBtnDisabled]}
             onPress={onSubmit}
             disabled={busy}>
-            <Text style={styles.primaryBtnText}>{busy ? 'Entrando…' : 'Iniciar sesión'}</Text>
-          </Pressable>
-
-          <Pressable onPress={() => router.push('/forgot-password')} style={styles.secondaryLink}>
-            <Text style={styles.secondaryLinkText}>¿Olvidaste tu contraseña?</Text>
+            <Text style={styles.primaryBtnText}>{busy ? 'Enviando…' : 'Enviar enlace'}</Text>
           </Pressable>
 
           <Pressable onPress={() => router.back()} style={styles.backLink}>
@@ -113,6 +111,12 @@ const styles = StyleSheet.create({
     color: FtColors.text,
     backgroundColor: FtColors.surface,
   },
+  hint: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: FtColors.textFaint,
+    marginBottom: 16,
+  },
   primaryBtn: {
     marginTop: 8,
     backgroundColor: FtColors.accent,
@@ -122,8 +126,6 @@ const styles = StyleSheet.create({
   },
   primaryBtnDisabled: { opacity: 0.7 },
   primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
-  secondaryLink: { marginTop: 16, alignItems: 'center' },
-  secondaryLinkText: { fontSize: 15, color: FtColors.textMuted, textDecorationLine: 'underline' },
   backLink: { marginTop: 20, alignItems: 'center' },
   backLinkText: { fontSize: 15, color: FtColors.accent },
 });

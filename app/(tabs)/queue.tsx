@@ -14,6 +14,7 @@ import { useFocusEffect } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
 import { FtColors } from '@/constants/fasttable';
+import { REALTIME_QUEUE_TAB, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { supabase } from '@/lib/supabase';
 
 export default function QueueScreen() {
@@ -68,6 +69,8 @@ export default function QueueScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  useSupabaseRealtimeRefresh(REALTIME_QUEUE_TAB, load, !!user?.id);
 
   const onJoin = async () => {
     if (!user?.id) return;

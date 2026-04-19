@@ -18,6 +18,7 @@ import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
 import { FtColors } from '@/constants/fasttable';
+import { REALTIME_KITCHEN, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { mapCocinaRpcError } from '@/lib/cocina-errors';
 import { supabase } from '@/lib/supabase';
 
@@ -106,6 +107,12 @@ export default function KitchenScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  useSupabaseRealtimeRefresh(
+    REALTIME_KITCHEN,
+    load,
+    !!session && !!staffMember && (staffMember.rol === 'cocina' || staffMember.rol === 'gerente'),
+  );
 
   const onListo = async (id: string) => {
     setBusyId(id);

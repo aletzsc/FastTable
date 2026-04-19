@@ -14,6 +14,7 @@ import { useFocusEffect } from 'expo-router';
 import { ReservationModal } from '@/components/reservation-modal';
 import { useAuth } from '@/contexts/auth-context';
 import { FtColors } from '@/constants/fasttable';
+import { REALTIME_TABLES_SCREEN, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { supabase } from '@/lib/supabase';
 
 type EstadoMesa = 'libre' | 'ocupada' | 'reservada';
@@ -147,6 +148,8 @@ export default function TablesScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  useSupabaseRealtimeRefresh(REALTIME_TABLES_SCREEN, load, true);
 
   const onReserveConfirm = async (scheduledAt: Date, partySize: number, note: string) => {
     if (!reserveTable) return;

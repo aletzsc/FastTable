@@ -17,6 +17,7 @@ import { useFocusEffect } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
 import { FtColors } from '@/constants/fasttable';
+import { REALTIME_MENU_COMENSAL, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { fetchLineasCuentaComensal } from '@/lib/cuenta-comensal';
 import { mapCocinaRpcError } from '@/lib/cocina-errors';
 import { formatPriceFromCents } from '@/lib/format';
@@ -103,6 +104,12 @@ export default function MenuScreen() {
     await Promise.all([load(), loadMesaYCuenta()]);
     setRefreshing(false);
   }, [load, loadMesaYCuenta]);
+
+  const reloadMenuTab = useCallback(async () => {
+    await Promise.all([load(), loadMesaYCuenta()]);
+  }, [load, loadMesaYCuenta]);
+
+  useSupabaseRealtimeRefresh(REALTIME_MENU_COMENSAL, reloadMenuTab, true);
 
   const openModal = (item: Item) => {
     if (!item.disponible) return;

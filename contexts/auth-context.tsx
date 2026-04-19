@@ -9,7 +9,6 @@ import {
   type ReactNode,
 } from 'react';
 
-import { useAuthDeepLink } from '@/hooks/use-auth-deep-link';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 
@@ -30,7 +29,6 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  useAuthDeepLink();
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [staffMember, setStaffMember] = useState<StaffRow | null>(null);

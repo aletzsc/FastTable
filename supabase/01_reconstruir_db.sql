@@ -943,4 +943,33 @@ UPDATE public.items_menu
 SET imagen_url = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80'
 WHERE imagen_url IS NULL;
 
+-- ========== Realtime (actualización en vivo en la app) ==========
+DO $realtime$
+DECLARE
+  t text;
+  tables text[] := ARRAY[
+    'mesas',
+    'fila_espera',
+    'solicitudes_servicio',
+    'reservas_mesa',
+    'pedidos_cocina',
+    'items_menu',
+    'personal'
+  ];
+BEGIN
+  FOREACH t IN ARRAY tables
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime'
+        AND schemaname = 'public'
+        AND tablename = t
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+    END IF;
+  END LOOP;
+END
+$realtime$;
+
 COMMIT;

@@ -15,6 +15,7 @@ import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 
 import { FtColors } from '@/constants/fasttable';
+import { formatAuthErrorMessage } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
 export default function RegisterScreen() {
@@ -51,7 +52,7 @@ export default function RegisterScreen() {
         },
       });
       if (error) {
-        Alert.alert('Registro', error.message);
+        Alert.alert('Registro', formatAuthErrorMessage(error.message));
         return;
       }
 
@@ -140,6 +141,10 @@ export default function RegisterScreen() {
             <Text style={styles.primaryBtnText}>{busy ? 'Creando cuenta…' : 'Crear cuenta'}</Text>
           </Pressable>
 
+          <Pressable onPress={() => router.push('/forgot-password')} style={styles.secondaryLink}>
+            <Text style={styles.secondaryLinkText}>¿Olvidaste tu contraseña?</Text>
+          </Pressable>
+
           <Pressable onPress={() => router.back()} style={styles.backLink}>
             <Text style={styles.backLinkText}>Volver</Text>
           </Pressable>
@@ -175,6 +180,8 @@ const styles = StyleSheet.create({
   },
   primaryBtnDisabled: { opacity: 0.7 },
   primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
+  secondaryLink: { marginTop: 16, alignItems: 'center' },
+  secondaryLinkText: { fontSize: 15, color: FtColors.textMuted, textDecorationLine: 'underline' },
   backLink: { marginTop: 20, alignItems: 'center' },
   backLinkText: { fontSize: 15, color: FtColors.accent },
 });

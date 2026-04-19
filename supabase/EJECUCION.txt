@@ -35,4 +35,8 @@ Si la base ya existía antes de abril 2026 y solo quieres las novedades del pane
 Pedidos a cocina + disponibilidad de platos + pantalla cocinero:
   → ejecuta patch_cocina_pedidos.sql (una vez, después de tener el resto del esquema FastTable).
 
+Actualización en vivo (Realtime) sin deslizar para refrescar:
+  → patch_realtime_publication.sql (una vez; en proyectos nuevos ya va al final de 01_reconstruir_db.sql).
+  → En Supabase → Project Settings → Realtime: asegúrate de que Realtime esté habilitado para el proyecto.
+
 Documentación operativa: GUIA_ALTERAR_DB.txt

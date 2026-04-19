@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
 import { FtColors } from '@/constants/fasttable';
+import { formatAuthErrorMessage } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
 export default function WorkerLoginScreen() {
@@ -42,7 +43,7 @@ export default function WorkerLoginScreen() {
     try {
       const { data, error: signErr } = await supabase.auth.signInWithPassword({ email: e, password });
       if (signErr) {
-        Alert.alert('Acceso', signErr.message);
+        Alert.alert('Acceso', formatAuthErrorMessage(signErr.message));
         return;
       }
       const uid = data.user?.id;
@@ -119,6 +120,10 @@ export default function WorkerLoginScreen() {
         <Pressable style={[styles.primaryBtn, busy && styles.btnDisabled]} onPress={onSubmit} disabled={busy}>
           <Text style={styles.primaryBtnText}>{busy ? 'Entrando…' : 'Entrar'}</Text>
         </Pressable>
+
+        <Pressable onPress={() => router.push('/forgot-password')} style={styles.linkMuted}>
+          <Text style={styles.linkMutedText}>¿Olvidaste tu contraseña?</Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -149,6 +154,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
+  linkMuted: { marginTop: 16, alignItems: 'center' },
+  linkMutedText: { fontSize: 14, color: FtColors.textMuted, textDecorationLine: 'underline' },
   btnDisabled: { opacity: 0.65 },
   muted: { color: FtColors.textMuted, fontSize: 14 },
 });
