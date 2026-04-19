@@ -189,8 +189,19 @@ export default function TablesScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        <Text style={styles.intro}>Disponibilidad de mesas y reservas.</Text>
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={FtColors.accent}
+            colors={[FtColors.accent]}
+          />
+        }>
+        <View style={styles.hero}>
+          <Text style={styles.heroEyebrow}>Salón</Text>
+          <Text style={styles.heroTitle}>Mesas</Text>
+          <Text style={styles.heroSub}>Elige una mesa libre y confirma día y hora.</Text>
+        </View>
 
         {loading && !refreshing ? (
           <ActivityIndicator color={FtColors.accent} style={styles.loader} />
@@ -217,44 +228,56 @@ export default function TablesScreen() {
           const myRes = myByTableId.get(t.id);
           return (
             <View key={t.id} style={styles.card}>
-              <View style={styles.cardTop}>
-                <Text style={styles.tableId}>{t.codigo}</Text>
-                <View
-                  style={[
-                    styles.badge,
-                    t.estado === 'libre' && styles.badgeOk,
-                    t.estado === 'ocupada' && styles.badgeBusy,
-                    t.estado === 'reservada' && styles.badgeHold,
-                  ]}>
-                  <Text style={styles.badgeText}>{statusLabel(t.estado)}</Text>
+              <View style={styles.cardAccent} />
+              <View style={styles.cardInner}>
+                <View style={styles.cardTop}>
+                  <Text style={styles.tableId}>{t.codigo}</Text>
+                  <View
+                    style={[
+                      styles.badge,
+                      t.estado === 'libre' && styles.badgeOk,
+                      t.estado === 'ocupada' && styles.badgeBusy,
+                      t.estado === 'reservada' && styles.badgeHold,
+                    ]}>
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        t.estado === 'libre' && styles.badgeTxtOk,
+                        t.estado === 'ocupada' && styles.badgeTxtBusy,
+                        t.estado === 'reservada' && styles.badgeTxtHold,
+                      ]}>
+                      {statusLabel(t.estado)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.meta}>Zona: {t.nombreZona ?? '—'}</Text>
-              <Text style={styles.meta}>Asientos: {t.capacidad}</Text>
+                <Text style={styles.meta}>
+                  {t.nombreZona ?? 'Sin zona'} · {t.capacidad} plazas
+                </Text>
 
-              {myRes ? (
-                <View style={styles.resBox}>
-                  <Text style={styles.resText}>
-                    Tu reserva:{' '}
-                    {new Date(myRes.fecha_hora_reserva).toLocaleString('es', {
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  <Pressable style={styles.cancelBtn} onPress={() => onCancelReservation(myRes.id)}>
-                    <Text style={styles.cancelBtnText}>Cancelar reserva</Text>
+                {myRes ? (
+                  <View style={styles.resBox}>
+                    <Text style={styles.resText}>
+                      Tu reserva ·{' '}
+                      {new Date(myRes.fecha_hora_reserva).toLocaleString('es', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                    <Pressable style={styles.cancelBtn} onPress={() => onCancelReservation(myRes.id)}>
+                      <Text style={styles.cancelBtnText}>Cancelar</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                {t.estado === 'libre' && user ? (
+                  <Pressable style={styles.reserveBtn} onPress={() => setReserveTable(t)}>
+                    <Text style={styles.reserveBtnText}>Reservar</Text>
                   </Pressable>
-                </View>
-              ) : null}
-
-              {t.estado === 'libre' && user ? (
-                <Pressable style={styles.reserveBtn} onPress={() => setReserveTable(t)}>
-                  <Text style={styles.reserveBtnText}>Reservar esta mesa</Text>
-                </Pressable>
-              ) : null}
+                ) : null}
+              </View>
             </View>
           );
         })}
@@ -272,56 +295,87 @@ export default function TablesScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: FtColors.background },
-  content: { padding: 16, paddingBottom: 32 },
-  intro: { fontSize: 14, color: FtColors.textMuted, marginBottom: 16, lineHeight: 20 },
-  loader: { marginVertical: 16 },
-  err: { color: '#B91C1C', marginBottom: 12, fontSize: 14 },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40 },
+  hero: { marginBottom: 22 },
+  heroEyebrow: {
+    fontSize: 11,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    color: FtColors.accentMuted,
+    marginBottom: 6,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '300',
+    color: FtColors.text,
+    letterSpacing: 1,
+  },
+  heroSub: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    color: FtColors.textMuted,
+    maxWidth: 300,
+  },
+  loader: { marginVertical: 20 },
+  err: { color: FtColors.danger, marginBottom: 12, fontSize: 14 },
   empty: { fontSize: 14, color: FtColors.textMuted, marginBottom: 16 },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 22 },
   chip: {
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: FtColors.border,
-    backgroundColor: FtColors.surface,
+    borderColor: FtColors.borderSubtle,
+    backgroundColor: 'transparent',
   },
-  chipOn: { borderColor: FtColors.accent, backgroundColor: '#FFF7ED' },
-  chipText: { fontSize: 13, color: FtColors.text },
+  chipOn: {
+    borderColor: FtColors.accent,
+    backgroundColor: 'rgba(198, 168, 92, 0.08)',
+  },
+  chipText: { fontSize: 12, color: FtColors.textMuted, letterSpacing: 0.2 },
   chipTextOn: { color: FtColors.accent, fontWeight: '600' },
   card: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: FtColors.surface,
-    borderWidth: 1,
-    borderColor: FtColors.border,
+    flexDirection: 'row',
     marginBottom: 12,
-  },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  tableId: { fontSize: 20, fontWeight: '700', color: FtColors.text },
-  badge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8 },
-  badgeOk: { backgroundColor: '#DCFCE7' },
-  badgeBusy: { backgroundColor: '#FEE2E2' },
-  badgeHold: { backgroundColor: '#FEF3C7' },
-  badgeText: { fontSize: 12, fontWeight: '600', color: FtColors.text },
-  meta: { marginTop: 6, fontSize: 14, color: FtColors.textMuted },
-  resBox: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: '#FFF7ED',
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: FtColors.surfaceElevated,
     borderWidth: 1,
-    borderColor: FtColors.border,
+    borderColor: FtColors.borderSubtle,
   },
-  resText: { fontSize: 14, color: FtColors.text, fontWeight: '600' },
-  cancelBtn: { marginTop: 10, alignSelf: 'flex-start' },
-  cancelBtnText: { fontSize: 14, color: '#B91C1C', fontWeight: '600' },
-  reserveBtn: {
+  cardAccent: {
+    width: 3,
+    backgroundColor: FtColors.accent,
+    opacity: 0.65,
+  },
+  cardInner: { flex: 1, paddingVertical: 16, paddingHorizontal: 16 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  tableId: { fontSize: 20, fontWeight: '500', color: FtColors.text, letterSpacing: 0.5 },
+  badge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 },
+  badgeOk: { backgroundColor: 'rgba(125, 206, 160, 0.12)' },
+  badgeBusy: { backgroundColor: 'rgba(224, 112, 110, 0.12)' },
+  badgeHold: { backgroundColor: 'rgba(216, 181, 106, 0.14)' },
+  badgeText: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8 },
+  badgeTxtOk: { color: FtColors.success },
+  badgeTxtBusy: { color: FtColors.danger },
+  badgeTxtHold: { color: FtColors.warning },
+  meta: { marginTop: 8, fontSize: 13, color: FtColors.textFaint },
+  resBox: {
     marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: FtColors.border,
+  },
+  resText: { fontSize: 14, color: FtColors.text, fontWeight: '400' },
+  cancelBtn: { marginTop: 10, alignSelf: 'flex-start' },
+  cancelBtnText: { fontSize: 13, color: FtColors.accent, fontWeight: '500' },
+  reserveBtn: {
+    marginTop: 16,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 999,
     backgroundColor: FtColors.accent,
     alignItems: 'center',
   },
-  reserveBtnText: { color: '#FFFBEB', fontSize: 15, fontWeight: '600' },
+  reserveBtnText: { color: FtColors.onAccent, fontSize: 14, fontWeight: '600', letterSpacing: 0.4 },
 });

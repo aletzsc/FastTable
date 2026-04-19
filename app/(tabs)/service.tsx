@@ -52,7 +52,8 @@ export default function ServiceScreen() {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <Text style={styles.intro}>Pide ayuda al equipo del salón cuando lo necesites.</Text>
+      <Text style={styles.eyebrow}>Asistencia</Text>
+      <Text style={styles.intro}>Llama al personal cuando estés en mesa.</Text>
 
       <View style={styles.card}>
         <Text style={styles.label}>Código de mesa</Text>
@@ -87,35 +88,42 @@ export default function ServiceScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: FtColors.background },
-  content: { padding: 16, paddingBottom: 32 },
-  intro: { fontSize: 14, color: FtColors.textMuted, marginBottom: 16, lineHeight: 20 },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 36 },
+  eyebrow: {
+    fontSize: 11,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    color: FtColors.accentMuted,
+    marginBottom: 6,
+  },
+  intro: { fontSize: 15, color: FtColors.textMuted, marginBottom: 18, lineHeight: 22 },
   card: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: FtColors.surface,
+    padding: 18,
+    borderRadius: 14,
+    backgroundColor: FtColors.surfaceElevated,
     borderWidth: 1,
-    borderColor: FtColors.border,
+    borderColor: FtColors.borderSubtle,
     marginBottom: 12,
   },
   label: { fontSize: 13, fontWeight: '600', color: FtColors.text, marginBottom: 8 },
   input: {
     borderWidth: 1,
-    borderColor: FtColors.border,
-    borderRadius: 10,
+    borderColor: FtColors.borderSubtle,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
     color: FtColors.text,
-    backgroundColor: FtColors.background,
+    backgroundColor: FtColors.surface,
   },
   inputMulti: { minHeight: 100, textAlignVertical: 'top' },
   primaryBtn: {
     backgroundColor: FtColors.accent,
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     marginTop: 4,
   },
-  primaryBtnText: { color: '#FFFBEB', fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
   btnDisabled: { opacity: 0.65 },
 });

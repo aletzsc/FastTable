@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
   },
-  primaryBtnText: { color: '#FFFBEB', fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
   btnDisabled: { opacity: 0.65 },
   muted: { color: FtColors.textMuted, fontSize: 14 },
 });

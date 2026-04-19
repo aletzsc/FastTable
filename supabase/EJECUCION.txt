@@ -1,12 +1,19 @@
-FastTable — qué ejecutar en Supabase (SQL Editor)
+FastTable — orden para reconstruir la base en Supabase (SQL Editor)
 
-OPCIÓN A — Base vacía, todo en uno
-  1) (Opcional) 00_borrar_todo_fasttable.sql  → solo si quedan tablas/funciones viejas
-  2) montar_db_desde_cero.sql                → esquema + RLS + funciones + datos de ejemplo (BEGIN/COMMIT)
+1) (Opcional) 00_borrar_fasttable.sql
+   Solo si ya existen tablas/funciones FastTable y quieres limpiar antes.
+   No borra auth.users.
 
-OPCIÓN B — Por partes (si el pegado largo falla)
-  1) (Opcional) 00_borrar_todo_fasttable.sql
-  2) schema_completo_es.sql                  → tablas, triggers, RLS, RPC (sin seed)
-  3) seed_datos_es.sql                       → zonas, mesas, menú de ejemplo
+2) 01_reconstruir_db.sql
+   Esquema completo + RLS + triggers + RPC + datos de ejemplo (menú, zonas, mesas).
+   Pegar TODO y ejecutar con RUN (no Explain). Transacción BEGIN…COMMIT.
 
-No uses los scripts antiguos en inglés (schema.sql, reservations.sql, seed.sql): fueron eliminados del repo.
+3) Cuentas de trabajadores en Authentication
+   npm run demo:workers
+   (o crea usuarios manualmente con los correos de DEMO_CUENTAS.txt)
+
+4) 02_enlazar_personal_demo.sql
+   Vincula los cuatro roles de personal (anfitrión, mesero, gerente, cocina) a esos usuarios.
+   Omitir si demo:workers ya insertó filas en public.personal.
+
+Documentación operativa: GUIA_ALTERAR_DB.txt

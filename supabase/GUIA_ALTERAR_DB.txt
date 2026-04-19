@@ -1,0 +1,171 @@
+================================================================================
+FastTable — Guía para alterar la base de datos (Supabase / PostgreSQL)
+================================================================================
+
+Dónde trabajar
+--------------
+- Supabase Dashboard → SQL Editor: para INSERT/UPDATE/SELECT con permisos de
+  administrador (rol postgres). Las políticas RLS no aplican al rol que usa el
+  SQL Editor en modo servicio.
+- Authentication → Users: para crear cuentas (correo/contraseña) o ver el
+  id (UUID) de cada usuario.
+- Table Editor: útil para ver datos, pero inserts en tablas con RLS pueden
+  fallar si no eres el usuario afectado; para datos de negocio suele ser más
+  fiable el SQL Editor.
+
+
+================================================================================
+1. Personal (empleados) — tabla public.personal
+================================================================================
+
+Qué es
+------
+Cada fila enlaza UN usuario de Auth (auth.users) con un rol de trabajo en el
+restaurante. La app de “trabajador” comprueba que exista una fila aquí con
+activo = true.
+
+Columnas importantes
+----------------------
+  id_usuario     UUID, NOT NULL, UNIQUE → debe coincidir con auth.users.id
+  nombre_visible TEXT  → nombre que ves en el panel (ej. "María — Mesas")
+  rol            tipo enumerado rol_personal (ver abajo)
+  codigo_empleado TEXT opcional, único si lo rellenas (ej. "EMP-102")
+  activo         BOOLEAN → false = no puede entrar como personal aunque exista la cuenta
+
+Valores permitidos para rol (tipo public.rol_personal)
+------------------------------------------------------
+  anfitrion   (recepción / recibir clientes)
+  mesero
+  gerente
+  cocina
+
+No puedes inventar textos: solo esos cuatro. Si en el futuro necesitas otro
+rol, hay que alterar el tipo ENUM en PostgreSQL (ALTER TYPE ... ADD VALUE).
+
+
+Cuatro cuentas demo (un rol cada una)
+-------------------------------------
+  npm run demo:workers  (requiere SUPABASE_SERVICE_ROLE_KEY en .env)
+  Detalle: DEMO_CUENTAS.txt. No uses SQL para insertar en auth.users (42501).
+
+
+Flujo recomendado para dar de alta un empleado
+----------------------------------------------
+1) En Supabase: Authentication → Add user (o el usuario ya se registró solo).
+   Copia su UUID (campo "User UID").
+
+2) Comprueba que exista perfil (tabla public.perfiles). Suele crearse sola al
+   registrarse por el trigger. Si no:
+   INSERT INTO public.perfiles (id, nombre_completo)
+   VALUES ('UUID-AQUÍ', 'Nombre Apellido');
+
+3) Inserta la fila de personal:
+
+   INSERT INTO public.personal (id_usuario, nombre_visible, rol, codigo_empleado, activo)
+   VALUES (
+     'UUID-AQUÍ',
+     'Ana López',
+     'mesero',
+     'EMP-001',
+     true
+   );
+
+4) El empleado entra en la app con ESE correo y contraseña → pantalla worker.
+
+
+Desactivar sin borrar
+---------------------
+  UPDATE public.personal SET activo = false WHERE id_usuario = 'UUID';
+
+Borrar vínculo (y se borra la cuenta Auth si tienes ON DELETE CASCADE en
+usuarios dependientes; cuidado)
+  DELETE FROM public.personal WHERE id_usuario = 'UUID';
+
+Cambiar rol
+-----------
+  UPDATE public.personal SET rol = 'gerente' WHERE id_usuario = 'UUID';
+
+
+Consultar UUID por correo (SQL Editor)
+--------------------------------------
+  SELECT id, email FROM auth.users WHERE email = 'empleado@tudominio.com';
+
+
+================================================================================
+2. Mesas y zonas — public.zonas, public.mesas
+================================================================================
+
+Zona (salón, terraza, etc.)
+---------------------------
+  INSERT INTO public.zonas (nombre, orden) VALUES ('Salón VIP', 3);
+
+Mesa
+----
+  estado debe ser: libre | ocupada | reservada  (enum estado_mesa)
+  INSERT INTO public.mesas (codigo, id_zona, capacidad, estado, notas)
+  VALUES ('M5', 'UUID-DE-ZONA', 6, 'libre', 'Esquina');
+
+
+================================================================================
+3. Menú — public.categorias_menu, public.items_menu
+================================================================================
+
+Categoría
+---------
+  INSERT INTO public.categorias_menu (nombre, orden) VALUES ('Cócteles', 5);
+
+Plato / bebida
+----------------
+  precio_centavos = precio en céntimos (ej. 12,50 € → 1250)
+  INSERT INTO public.items_menu (id_categoria, nombre, descripcion, precio_centavos, disponible)
+  VALUES ('UUID-CATEGORÍA', 'Mojito', 'Ron, lima, hierbabuena', 8500, true);
+
+
+================================================================================
+4. Reservas y estados (referencia)
+================================================================================
+
+  reservas_mesa.ciclo: activa | cancelada | completada
+  mesas.estado:        libre | ocupada | reservada
+  fila_espera.estado:  esperando | sentado | cancelado
+  solicitudes_servicio.estado: abierta | reconocida | cerrada
+
+La lógica de negocio (crear/cancelar reserva, marcar “llegó”) está en funciones
+RPC (crear_reserva_mesa, cancelar_reserva_mesa, personal_resolver_reserva);
+no hace falta tocarlas salvo que cambies reglas de negocio.
+
+
+================================================================================
+5. Ampliar tipos de trabajador (nuevo valor en el ENUM)
+================================================================================
+
+Solo si de verdad necesitas un rol nuevo (ej. 'barra'):
+
+  ALTER TYPE public.rol_personal ADD VALUE 'barra';
+
+(Después tendrías que usar ese valor en INSERT/UPDATE y, si aplica, en la app
+en app/worker para mostrar la etiqueta en español.)
+
+Añadir valores a otros ENUMs es similar (ALTER TYPE ... ADD VALUE).
+
+
+================================================================================
+6. Copias de seguridad y entornos
+================================================================================
+
+- Cambios delicados: prueba en un proyecto Supabase de desarrollo antes de
+  producción.
+- Para clonar datos, usa “Database backups” en el plan de Supabase o exporta
+  tablas desde el SQL Editor con COPY / pg_dump si tienes acceso.
+
+
+================================================================================
+7. Archivos SQL en este repositorio
+================================================================================
+
+  EJECUCION.txt              → orden para crear o resetear el esquema
+  00_borrar_fasttable.sql  → borra objetos FastTable en public (opcional, antes de reinstalar)
+  01_reconstruir_db.sql      → instalación completa: esquema + RLS + RPC + datos de ejemplo
+  02_enlazar_personal_demo.sql → enlaza los 4 roles demo en public.personal (tras crear usuarios)
+
+================================================================================

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,27 +13,14 @@ import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
 import { FtColors } from '@/constants/fasttable';
+import {
+  canShowNoShow,
+  mapReservaRows,
+  mapStaffRpcError,
+  splitReservationsByTime,
+  type ReservaStaffRow,
+} from '@/lib/worker-reservations-logic';
 import { supabase } from '@/lib/supabase';
-
-type EstadoMesa = 'libre' | 'ocupada' | 'reservada';
-
-type ResRow = {
-  id: string;
-  id_usuario: string;
-  fecha_hora_reserva: string;
-  mesero_atender_a_partir_de: string;
-  personas_grupo: number;
-  nota: string | null;
-  comensal_llego: boolean | null;
-  ciclo: string;
-  mesas: { id: string; codigo: string; estado: EstadoMesa } | null;
-};
-
-type TableRow = {
-  id: string;
-  codigo: string;
-  estado: EstadoMesa;
-};
 
 function fmt(d: string) {
   return new Date(d).toLocaleString('es', {
@@ -45,56 +32,26 @@ function fmt(d: string) {
   });
 }
 
-function mapWaiterErr(msg: string) {
-  if (msg.includes('solo_personal') || msg.includes('staff_only')) return 'Sin permiso de personal.';
-  if (msg.includes('ya_atendida') || msg.includes('already_resolved')) return 'Esta reserva ya fue atendida.';
-  return msg;
-}
-
 export default function WorkerReservationsScreen() {
   const router = useRouter();
   const { session, staffMember, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [attention, setAttention] = useState<ResRow[]>([]);
-  const [upcoming, setUpcoming] = useState<ResRow[]>([]);
-  const [tables, setTables] = useState<TableRow[]>([]);
+  const [reservas, setReservas] = useState<ReservaStaffRow[]>([]);
   const [names, setNames] = useState<Record<string, string | null>>({});
 
   const load = useCallback(async () => {
-    const nowIso = new Date().toISOString();
-
     const { data: resData } = await supabase
       .from('reservas_mesa')
       .select(
-        'id, id_usuario, fecha_hora_reserva, mesero_atender_a_partir_de, personas_grupo, nota, comensal_llego, ciclo, mesas ( id, codigo, estado )',
+        'id, id_usuario, fecha_hora_reserva, mesero_atender_a_partir_de, personas_grupo, nota, comensal_llego, ciclo, mesas ( id, codigo, estado, id_personal_atendiendo )',
       )
       .eq('ciclo', 'activa')
       .is('comensal_llego', null)
       .order('fecha_hora_reserva');
 
-    const rows: ResRow[] = (resData ?? []).map((raw: Record<string, unknown>) => {
-      const dt = raw.mesas as
-        | { id: string; codigo: string; estado: EstadoMesa }
-        | { id: string; codigo: string; estado: EstadoMesa }[]
-        | null;
-      const mesas = Array.isArray(dt) ? dt[0] ?? null : dt;
-      return {
-        id: raw.id as string,
-        id_usuario: raw.id_usuario as string,
-        fecha_hora_reserva: raw.fecha_hora_reserva as string,
-        mesero_atender_a_partir_de: raw.mesero_atender_a_partir_de as string,
-        personas_grupo: raw.personas_grupo as number,
-        nota: (raw.nota as string | null) ?? null,
-        comensal_llego: (raw.comensal_llego as boolean | null) ?? null,
-        ciclo: raw.ciclo as string,
-        mesas,
-      };
-    });
-    const needAttention = rows.filter((r) => r.mesero_atender_a_partir_de <= nowIso);
-    const soon = rows.filter((r) => r.mesero_atender_a_partir_de > nowIso);
-    setAttention(needAttention);
-    setUpcoming(soon);
+    const rows = mapReservaRows((resData ?? []) as Record<string, unknown>[]);
+    setReservas(rows);
 
     const userIds = [...new Set(rows.map((r) => r.id_usuario))];
     if (userIds.length > 0) {
@@ -107,10 +64,12 @@ export default function WorkerReservationsScreen() {
     } else {
       setNames({});
     }
-
-    const { data: tdata } = await supabase.from('mesas').select('id, codigo, estado').order('codigo');
-    setTables((tdata as TableRow[]) ?? []);
   }, []);
+
+  const { upcoming, attend } = useMemo(
+    () => splitReservationsByTime(reservas, new Date()),
+    [reservas],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -138,29 +97,20 @@ export default function WorkerReservationsScreen() {
       p_comensal_llego: arrived,
     });
     if (error) {
-      Alert.alert('Atención', mapWaiterErr(error.message));
+      Alert.alert('Atención', mapStaffRpcError(error.message));
       return;
     }
     await load();
   };
 
-  const setTableStatus = async (id: string, estado: EstadoMesa) => {
-    const { error } = await supabase
-      .from('mesas')
-      .update({ estado, actualizado_en: new Date().toISOString() })
-      .eq('id', id);
+  const onAtender = async (id: string) => {
+    const { error } = await supabase.rpc('personal_atender_reserva', { p_id_reserva: id });
     if (error) {
-      Alert.alert('Mesa', error.message);
+      Alert.alert('Atender', mapStaffRpcError(error.message));
       return;
     }
     await load();
   };
-
-  const statusLabel = useCallback((s: EstadoMesa) => {
-    if (s === 'libre') return 'Libre';
-    if (s === 'ocupada') return 'Ocupada';
-    return 'Reservada';
-  }, []);
 
   if (authLoading) {
     return (
@@ -178,7 +128,14 @@ export default function WorkerReservationsScreen() {
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={FtColors.accent}
+          colors={[FtColors.accent]}
+        />
+      }>
       <Pressable style={styles.back} onPress={() => router.back()}>
         <Text style={styles.backText}>← Volver al panel</Text>
       </Pressable>
@@ -187,17 +144,20 @@ export default function WorkerReservationsScreen() {
 
       <Text style={styles.h1}>Ir a atender</Text>
       <Text style={styles.sub}>
-        Aparecen cuando pasaron 5 minutos desde la hora reservada. Confirma si el comensal llegó y el
-        estado de la mesa.
+        Desde la hora acordada: atender mesa, confirmar llegada o no (tras 5 min desde esa hora).
       </Text>
 
-      {attention.length === 0 ? (
+      {attend.length === 0 ? (
         <Text style={styles.empty}>Nada pendiente en este momento.</Text>
       ) : (
-        attention.map((r) => {
+        attend.map((r) => {
           const t = r.mesas;
           const code = t?.codigo ?? '—';
           const guest = names[r.id_usuario]?.trim() || 'Cliente';
+          const other = t?.id_personal_atendiendo != null && t.id_personal_atendiendo !== staffMember.id;
+          const mine = t?.id_personal_atendiendo === staffMember.id;
+          const showNoShow = canShowNoShow(r, new Date());
+
           return (
             <View key={r.id} style={styles.card}>
               <Text style={styles.cardTitle}>
@@ -206,17 +166,29 @@ export default function WorkerReservationsScreen() {
               <Text style={styles.line}>Hora acordada: {fmt(r.fecha_hora_reserva)}</Text>
               <Text style={styles.line}>Personas: {r.personas_grupo}</Text>
               {r.nota ? <Text style={styles.line}>Nota: {r.nota}</Text> : null}
-              <View style={styles.rowBtns}>
-                <Pressable style={styles.btnOk} onPress={() => resolve(r.id, true)}>
-                  <Text style={styles.btnOkText}>Llegó</Text>
-                </Pressable>
-                <Pressable style={styles.btnNo} onPress={() => resolve(r.id, false)}>
-                  <Text style={styles.btnNoText}>No llegó</Text>
-                </Pressable>
-              </View>
-              <Text style={styles.hintSmall}>
-                «Llegó» deja la mesa ocupada. «No llegó» libera la mesa.
-              </Text>
+              {other ? (
+                <Text style={styles.warn}>Otro mesero está atendiendo esta mesa.</Text>
+              ) : (
+                <>
+                  <View style={styles.rowBtns}>
+                    <Pressable style={[styles.btnSecondary, mine && styles.btnSecondaryOn]} onPress={() => onAtender(r.id)}>
+                      <Text style={styles.btnSecondaryText}>{mine ? 'Atendiendo' : 'Atender'}</Text>
+                    </Pressable>
+                    <Pressable style={styles.btnOk} onPress={() => resolve(r.id, true)}>
+                      <Text style={styles.btnOkText}>El comensal llegó</Text>
+                    </Pressable>
+                  </View>
+                  {showNoShow ? (
+                    <Pressable style={styles.btnNo} onPress={() => resolve(r.id, false)}>
+                      <Text style={styles.btnNoText}>Comensal no llegó</Text>
+                    </Pressable>
+                  ) : (
+                    <Text style={styles.hintSmall}>
+                      Tras 5 min desde la hora acordada podrás marcar “Comensal no llegó”.
+                    </Text>
+                  )}
+                </>
+              )}
             </View>
           );
         })
@@ -224,7 +196,7 @@ export default function WorkerReservationsScreen() {
 
       <Text style={[styles.h1, styles.mt]}>Próximas reservas</Text>
       {upcoming.length === 0 ? (
-        <Text style={styles.empty}>No hay reservas próximas sin atender.</Text>
+        <Text style={styles.empty}>No hay reservas próximas.</Text>
       ) : (
         upcoming.map((r) => {
           const t = r.mesas;
@@ -237,31 +209,10 @@ export default function WorkerReservationsScreen() {
               <Text style={styles.line}>
                 {fmt(r.fecha_hora_reserva)} · {r.personas_grupo} pers.
               </Text>
-              <Text style={styles.waitUntil}>El aviso para ir a la mesa será después de esta hora.</Text>
             </View>
           );
         })
       )}
-
-      <Text style={[styles.h1, styles.mt]}>Estado de mesas</Text>
-      <Text style={styles.sub}>Marca libre u ocupada cuando lo necesites.</Text>
-
-      {tables.map((t) => (
-        <View key={t.id} style={styles.tableRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.tableCode}>{t.codigo}</Text>
-            <Text style={styles.tableStatus}>Ahora: {statusLabel(t.estado)}</Text>
-          </View>
-          <View style={styles.tableActions}>
-            <Pressable style={styles.tbFree} onPress={() => setTableStatus(t.id, 'libre')}>
-              <Text style={styles.tbFreeText}>Libre</Text>
-            </Pressable>
-            <Pressable style={styles.tbOcc} onPress={() => setTableStatus(t.id, 'ocupada')}>
-              <Text style={styles.tbOccText}>Ocupada</Text>
-            </Pressable>
-          </View>
-        </View>
-      ))}
     </ScrollView>
   );
 }
@@ -279,65 +230,52 @@ const styles = StyleSheet.create({
   empty: { fontSize: 14, color: FtColors.textMuted, marginBottom: 12 },
   card: {
     padding: 16,
-    borderRadius: 12,
-    backgroundColor: FtColors.surface,
+    borderRadius: 14,
+    backgroundColor: FtColors.surfaceElevated,
     borderWidth: 1,
     borderColor: FtColors.accent,
     marginBottom: 12,
   },
   cardMuted: {
     padding: 14,
-    borderRadius: 12,
-    backgroundColor: FtColors.surface,
+    borderRadius: 14,
+    backgroundColor: FtColors.surfaceElevated,
     borderWidth: 1,
-    borderColor: FtColors.border,
+    borderColor: FtColors.borderSubtle,
     marginBottom: 10,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: FtColors.text, marginBottom: 8 },
   line: { fontSize: 14, color: FtColors.textMuted, marginBottom: 4 },
-  waitUntil: { fontSize: 12, color: FtColors.textMuted, marginTop: 6, fontStyle: 'italic' },
-  rowBtns: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  warn: { fontSize: 13, color: FtColors.warning, marginTop: 8 },
+  rowBtns: { flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap' },
+  btnSecondary: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: FtColors.border,
+    backgroundColor: FtColors.surface,
+  },
+  btnSecondaryOn: { borderColor: FtColors.accent },
+  btnSecondaryText: { fontSize: 14, fontWeight: '600', color: FtColors.text },
   btnOk: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    minWidth: 120,
+    paddingVertical: 10,
+    borderRadius: 999,
     backgroundColor: FtColors.success,
     alignItems: 'center',
   },
-  btnOkText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  btnOkText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   btnNo: {
-    flex: 1,
+    marginTop: 10,
     paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#E7E5E4',
-    alignItems: 'center',
-  },
-  btnNoText: { color: FtColors.text, fontWeight: '700', fontSize: 15 },
-  hintSmall: { fontSize: 11, color: FtColors.textMuted, marginTop: 10, lineHeight: 16 },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: FtColors.border,
-  },
-  tableCode: { fontSize: 17, fontWeight: '700', color: FtColors.text },
-  tableStatus: { fontSize: 13, color: FtColors.textMuted, marginTop: 2 },
-  tableActions: { flexDirection: 'row', gap: 8 },
-  tbFree: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: 999,
+    backgroundColor: FtColors.surface,
     borderWidth: 1,
     borderColor: FtColors.border,
-    backgroundColor: FtColors.background,
+    alignItems: 'center',
   },
-  tbFreeText: { fontSize: 13, fontWeight: '600', color: FtColors.text },
-  tbOcc: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: FtColors.accent,
-  },
-  tbOccText: { fontSize: 13, fontWeight: '600', color: '#FFFBEB' },
+  btnNoText: { color: FtColors.text, fontWeight: '700', fontSize: 14 },
+  hintSmall: { fontSize: 11, color: FtColors.textMuted, marginTop: 10, lineHeight: 16 },
 });

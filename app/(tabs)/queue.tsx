@@ -129,8 +129,16 @@ export default function QueueScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-      <Text style={styles.intro}>Únete a la fila de espera o revisa tu lugar.</Text>
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={FtColors.accent}
+          colors={[FtColors.accent]}
+        />
+      }>
+      <Text style={styles.eyebrow}>Espera</Text>
+      <Text style={styles.intro}>Entra en la fila o revisa tu posición.</Text>
 
       {loading && !refreshing ? <ActivityIndicator color={FtColors.accent} /> : null}
 
@@ -181,14 +189,21 @@ export default function QueueScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: FtColors.background },
-  content: { padding: 16, paddingBottom: 32 },
-  intro: { fontSize: 14, color: FtColors.textMuted, marginBottom: 16, lineHeight: 20 },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 36 },
+  eyebrow: {
+    fontSize: 11,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    color: FtColors.accentMuted,
+    marginBottom: 6,
+  },
+  intro: { fontSize: 15, color: FtColors.textMuted, marginBottom: 18, lineHeight: 22 },
   card: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: FtColors.surface,
+    padding: 18,
+    borderRadius: 14,
+    backgroundColor: FtColors.surfaceElevated,
     borderWidth: 1,
-    borderColor: FtColors.border,
+    borderColor: FtColors.borderSubtle,
     marginBottom: 12,
   },
   label: { fontSize: 13, fontWeight: '600', color: FtColors.text, marginBottom: 8 },
@@ -196,30 +211,30 @@ const styles = StyleSheet.create({
   meta: { fontSize: 13, color: FtColors.textMuted, marginTop: 4 },
   input: {
     borderWidth: 1,
-    borderColor: FtColors.border,
-    borderRadius: 10,
+    borderColor: FtColors.borderSubtle,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
     color: FtColors.text,
-    backgroundColor: FtColors.background,
+    backgroundColor: FtColors.surface,
   },
   inputMulti: { minHeight: 88, textAlignVertical: 'top' },
   primaryBtn: {
     backgroundColor: FtColors.accent,
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     marginTop: 4,
   },
-  primaryBtnText: { color: '#FFFBEB', fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
   secondaryBtn: {
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: FtColors.border,
-    backgroundColor: FtColors.surface,
+    backgroundColor: FtColors.surfaceElevated,
     marginTop: 4,
   },
   secondaryBtnText: { color: FtColors.text, fontSize: 16, fontWeight: '600' },

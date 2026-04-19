@@ -24,15 +24,19 @@ export default function GuestTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        headerStyle: { backgroundColor: FtColors.surface },
-        headerTitleStyle: { color: FtColors.text, fontWeight: '600' },
+        headerStyle: { backgroundColor: FtColors.background },
+        headerTitleStyle: { color: FtColors.text, fontWeight: '500', fontSize: 17, letterSpacing: 0.2 },
         headerShadowVisible: false,
         tabBarActiveTintColor: FtColors.accent,
-        tabBarInactiveTintColor: FtColors.textMuted,
+        tabBarInactiveTintColor: FtColors.textFaint,
         tabBarStyle: {
           backgroundColor: FtColors.surface,
-          borderTopColor: FtColors.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: FtColors.borderSubtle,
+          height: 58,
+          paddingBottom: 6,
         },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '500', letterSpacing: 0.3 },
       }}>
       <Tabs.Screen
         name="index"

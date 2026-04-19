@@ -1,43 +1,27 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '@/contexts/auth-context';
 import { FtColors } from '@/constants/fasttable';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
-const FastTableLight = {
-  ...DefaultTheme,
+const FastTableTheme = {
+  ...DarkTheme,
   colors: {
-    ...DefaultTheme.colors,
+    ...DarkTheme.colors,
     primary: FtColors.accent,
     background: FtColors.background,
-    card: FtColors.surface,
+    card: FtColors.surfaceElevated,
     text: FtColors.text,
     border: FtColors.border,
     notification: FtColors.accentMuted,
   },
 };
 
-const FastTableDark = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    primary: '#FDBA74',
-    background: '#1C1917',
-    card: '#292524',
-    text: '#FAFAF9',
-    border: '#44403C',
-    notification: '#EA580C',
-  },
-};
-
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? FastTableDark : FastTableLight}>
+    <ThemeProvider value={FastTableTheme}>
       <AuthProvider>
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -46,7 +30,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="worker" options={{ headerShown: false }} />
         </Stack>
-        <StatusBar style="auto" />
+        <StatusBar style="light" />
       </AuthProvider>
     </ThemeProvider>
   );

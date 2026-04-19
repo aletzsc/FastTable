@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryBtnDisabled: { opacity: 0.7 },
-  primaryBtnText: { color: '#FFFBEB', fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
   backLink: { marginTop: 20, alignItems: 'center' },
   backLinkText: { fontSize: 15, color: FtColors.accent },
 });

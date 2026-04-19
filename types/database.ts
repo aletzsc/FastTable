@@ -1,4 +1,4 @@
-/** Tipos mínimos alineados con `supabase/schema_completo_es.sql`. */
+/** Tipos mínimos alineados con `supabase/01_reconstruir_db.sql`. */
 export type Database = {
   public: {
     Tables: {
@@ -48,6 +48,7 @@ export type Database = {
           capacidad: number;
           estado: 'libre' | 'ocupada' | 'reservada';
           notas: string | null;
+          id_personal_atendiendo: string | null;
           actualizado_en: string;
         };
       };

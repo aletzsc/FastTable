@@ -1,14 +1,15 @@
 -- =============================================================================
--- FastTable — montar base desde cero (Supabase SQL Editor)
+-- FastTable — RECONSTRUIR BASE COMPLETA (único script de esquema; Supabase SQL Editor)
+-- Incluye: tipos, tablas, triggers, RLS, RPC (reservas + mesero), seed menú/mesas.
 -- 1) Copia TODO este archivo y pégalo de una vez en el editor.
 -- 2) Ejecuta con RUN (no Explain). Una sola selección que incluya BEGIN…COMMIT.
--- 3) Requiere Auth (auth.users). Las funciones usan $function$…$function$ (sin INTO r).
---    Si el editor parte el script, ejecuta por orden: EJECUCION.txt
+-- 3) Requiere Auth (auth.users). Cuerpos plpgsql: $function$ … $function$.
+-- Orden con otros archivos: ver supabase/EJECUCION.txt
 -- =============================================================================
 
 BEGIN;
 
--- ========== Esquema (schema_completo_es.sql) ==========
+-- ========== Esquema ==========
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -53,11 +54,13 @@ CREATE TABLE public.mesas (
   capacidad INT NOT NULL CHECK (capacidad > 0),
   estado public.estado_mesa NOT NULL DEFAULT 'libre',
   notas TEXT,
+  id_personal_atendiendo UUID REFERENCES public.personal (id) ON DELETE SET NULL,
   actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_mesas_zona ON public.mesas (id_zona);
 CREATE INDEX idx_mesas_estado ON public.mesas (estado);
+CREATE INDEX idx_mesas_personal_atendiendo ON public.mesas (id_personal_atendiendo);
 
 CREATE TABLE public.fila_espera (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -177,6 +180,26 @@ CREATE TRIGGER tr_items_menu_actualizado BEFORE UPDATE ON public.items_menu
   FOR EACH ROW EXECUTE FUNCTION public.actualizar_marca_tiempo();
 CREATE TRIGGER tr_mesas_actualizado BEFORE UPDATE ON public.mesas
   FOR EACH ROW EXECUTE FUNCTION public.actualizar_marca_tiempo();
+
+CREATE OR REPLACE FUNCTION public.tr_mesas_al_liberar_mesero()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  IF NEW.estado = 'libre' THEN
+    NEW.id_personal_atendiendo := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS tr_mesas_liberar_mesero ON public.mesas;
+CREATE TRIGGER tr_mesas_liberar_mesero
+  BEFORE UPDATE OF estado ON public.mesas
+  FOR EACH ROW
+  WHEN (NEW.estado IS DISTINCT FROM OLD.estado)
+  EXECUTE FUNCTION public.tr_mesas_al_liberar_mesero();
+
 CREATE TRIGGER tr_solicitudes_actualizado BEFORE UPDATE ON public.solicitudes_servicio
   FOR EACH ROW EXECUTE FUNCTION public.actualizar_marca_tiempo();
 
@@ -264,6 +287,8 @@ CREATE POLICY solicitudes_insert ON public.solicitudes_servicio FOR INSERT TO au
   WITH CHECK (id_usuario IS NULL OR id_usuario = auth.uid());
 CREATE POLICY solicitudes_update_personal ON public.solicitudes_servicio FOR UPDATE TO authenticated
   USING (public.es_personal_activo());
+CREATE POLICY solicitudes_delete_personal ON public.solicitudes_servicio FOR DELETE TO authenticated
+  USING (public.es_personal_activo());
 
 CREATE POLICY auditoria_personal ON public.eventos_auditoria FOR ALL TO authenticated
   USING (public.es_personal_activo()) WITH CHECK (public.es_personal_activo());
@@ -284,6 +309,7 @@ SET search_path = public
 AS $function$
 DECLARE
   v_uid uuid := auth.uid();
+  v_id uuid;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'no_autenticado'; END IF;
   IF p_personas_grupo IS NULL OR p_personas_grupo < 1 THEN RAISE EXCEPTION 'grupo_invalido'; END IF;
@@ -302,17 +328,13 @@ BEGIN
     RAISE EXCEPTION 'usuario_ya_tiene_reserva';
   END IF;
 
-  RETURN (
-    WITH ins AS (
-      INSERT INTO public.reservas_mesa (id_usuario, id_mesa, fecha_hora_reserva, personas_grupo, nota)
-      VALUES (v_uid, p_id_mesa, p_fecha_hora, p_personas_grupo, NULLIF(trim(p_nota), ''))
-      RETURNING id
-    ),
-    u AS (
-      UPDATE public.mesas SET estado = 'reservada', actualizado_en = now() WHERE id = p_id_mesa RETURNING 1
-    )
-    SELECT i.id FROM ins i CROSS JOIN u
-  );
+  INSERT INTO public.reservas_mesa (id_usuario, id_mesa, fecha_hora_reserva, personas_grupo, nota)
+  VALUES (v_uid, p_id_mesa, p_fecha_hora, p_personas_grupo, NULLIF(trim(p_nota), ''))
+  RETURNING id INTO v_id;
+
+  UPDATE public.mesas SET estado = 'reservada', actualizado_en = now() WHERE id = p_id_mesa;
+
+  RETURN v_id;
 END;
 $function$;
 
@@ -380,11 +402,119 @@ BEGIN
 END;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.personal_atender_reserva(p_id_reserva uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  v_staff_id uuid;
+  v_mesa uuid;
+  v_asignado uuid;
+BEGIN
+  IF NOT public.es_personal_activo() THEN RAISE EXCEPTION 'solo_personal'; END IF;
+
+  SELECT p.id INTO v_staff_id FROM public.personal AS p WHERE p.id_usuario = auth.uid() AND p.activo = true LIMIT 1;
+  IF v_staff_id IS NULL THEN RAISE EXCEPTION 'sin_personal'; END IF;
+
+  PERFORM 1 FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'no_encontrada'; END IF;
+
+  IF (SELECT rm.ciclo FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva) IS DISTINCT FROM 'activa' THEN
+    RAISE EXCEPTION 'no_activa';
+  END IF;
+  IF (SELECT rm.comensal_llego FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva) IS NOT NULL THEN
+    RAISE EXCEPTION 'ya_atendida';
+  END IF;
+
+  v_mesa := (SELECT rm.id_mesa FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva);
+
+  IF (SELECT m.estado FROM public.mesas AS m WHERE m.id = v_mesa) IS DISTINCT FROM 'reservada' THEN
+    RAISE EXCEPTION 'mesa_no_reservada';
+  END IF;
+
+  SELECT m.id_personal_atendiendo INTO v_asignado FROM public.mesas AS m WHERE m.id = v_mesa;
+  IF v_asignado IS NOT NULL AND v_asignado <> v_staff_id THEN
+    RAISE EXCEPTION 'mesa_asignada_otro_mesero';
+  END IF;
+
+  UPDATE public.mesas AS t
+  SET id_personal_atendiendo = v_staff_id, actualizado_en = now()
+  WHERE t.id = v_mesa;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.personal_desasignar_mesa(p_id_mesa uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  v_staff_id uuid;
+  v_asignado uuid;
+BEGIN
+  IF NOT public.es_personal_activo() THEN RAISE EXCEPTION 'solo_personal'; END IF;
+  SELECT p.id INTO v_staff_id FROM public.personal AS p WHERE p.id_usuario = auth.uid() AND p.activo = true LIMIT 1;
+  IF v_staff_id IS NULL THEN RAISE EXCEPTION 'sin_personal'; END IF;
+
+  PERFORM 1 FROM public.mesas AS m WHERE m.id = p_id_mesa FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'no_encontrada'; END IF;
+
+  SELECT m.id_personal_atendiendo INTO v_asignado FROM public.mesas AS m WHERE m.id = p_id_mesa;
+  IF v_asignado IS NULL OR v_asignado <> v_staff_id THEN
+    RAISE EXCEPTION 'no_tu_mesa';
+  END IF;
+  IF (SELECT m.estado FROM public.mesas AS m WHERE m.id = p_id_mesa) IS DISTINCT FROM 'reservada' THEN
+    RAISE EXCEPTION 'solo_reservada_desasignar';
+  END IF;
+
+  UPDATE public.mesas AS t
+  SET id_personal_atendiendo = NULL, actualizado_en = now()
+  WHERE t.id = p_id_mesa;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.personal_liberar_mesa_atendida(p_id_mesa uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  v_staff_id uuid;
+  v_asignado uuid;
+BEGIN
+  IF NOT public.es_personal_activo() THEN RAISE EXCEPTION 'solo_personal'; END IF;
+  SELECT p.id INTO v_staff_id FROM public.personal AS p WHERE p.id_usuario = auth.uid() AND p.activo = true LIMIT 1;
+  IF v_staff_id IS NULL THEN RAISE EXCEPTION 'sin_personal'; END IF;
+
+  PERFORM 1 FROM public.mesas AS m WHERE m.id = p_id_mesa FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'no_encontrada'; END IF;
+
+  SELECT m.id_personal_atendiendo INTO v_asignado FROM public.mesas AS m WHERE m.id = p_id_mesa;
+  IF v_asignado IS NULL OR v_asignado <> v_staff_id THEN
+    RAISE EXCEPTION 'no_tu_mesa';
+  END IF;
+  IF (SELECT m.estado FROM public.mesas AS m WHERE m.id = p_id_mesa) IS DISTINCT FROM 'ocupada' THEN
+    RAISE EXCEPTION 'solo_ocupada_liberar';
+  END IF;
+
+  UPDATE public.mesas AS t
+  SET estado = 'libre', actualizado_en = now()
+  WHERE t.id = p_id_mesa;
+END;
+$function$;
+
 GRANT EXECUTE ON FUNCTION public.crear_reserva_mesa(uuid, timestamptz, int, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cancelar_reserva_mesa(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.personal_resolver_reserva(uuid, boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.personal_atender_reserva(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.personal_desasignar_mesa(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.personal_liberar_mesa_atendida(uuid) TO authenticated;
 
--- ========== Datos de ejemplo (seed_datos_es.sql) ==========
+-- ========== Datos de ejemplo (zonas, mesas, menú) ==========
 
 DELETE FROM public.items_menu WHERE id_categoria IN (
   SELECT id FROM public.categorias_menu WHERE nombre IN ('Entradas', 'Platos fuertes', 'Bebidas', 'Postres')

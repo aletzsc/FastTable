@@ -68,8 +68,16 @@ export default function MenuScreen() {
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-      <Text style={styles.intro}>Carta del restaurante</Text>
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={FtColors.accent}
+          colors={[FtColors.accent]}
+        />
+      }>
+      <Text style={styles.eyebrow}>Carta</Text>
+      <Text style={styles.intro}>Platos y precios del día</Text>
 
       {loading && !refreshing ? (
         <ActivityIndicator color={FtColors.accent} style={styles.loader} />
@@ -100,28 +108,34 @@ export default function MenuScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: FtColors.background },
-  content: { padding: 16, paddingBottom: 32 },
-  intro: { fontSize: 14, color: FtColors.textMuted, marginBottom: 16, lineHeight: 20 },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 36 },
+  eyebrow: {
+    fontSize: 11,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    color: FtColors.accentMuted,
+    marginBottom: 6,
+  },
+  intro: { fontSize: 15, color: FtColors.textMuted, marginBottom: 20, lineHeight: 22 },
   loader: { marginVertical: 16 },
-  err: { color: '#B91C1C', marginBottom: 12, fontSize: 14 },
+  err: { color: FtColors.danger, marginBottom: 12, fontSize: 14 },
   empty: { fontSize: 14, color: FtColors.textMuted },
-  section: { marginBottom: 20 },
+  section: { marginBottom: 24 },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: FtColors.text,
-    marginBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: FtColors.border,
-    paddingBottom: 6,
+    fontSize: 13,
+    fontWeight: '600',
+    color: FtColors.textFaint,
+    marginBottom: 12,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: FtColors.border,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: FtColors.borderSubtle,
   },
   rowDisabled: { opacity: 0.65 },
   itemName: { fontSize: 15, fontWeight: '600', color: FtColors.text },

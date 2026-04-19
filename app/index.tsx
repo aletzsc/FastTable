@@ -48,8 +48,10 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Text style={styles.eyebrow}>Bienvenido</Text>
         <Text style={styles.brand}>FastTable</Text>
-        <Text style={styles.tagline}>Reserva, pide y disfruta</Text>
+        <View style={styles.brandRule} />
+        <Text style={styles.tagline}>Reserva mesa, fila y servicio en un solo lugar.</Text>
 
         {session && user ? (
           <View style={styles.card}>
@@ -101,20 +103,35 @@ const styles = StyleSheet.create({
     backgroundColor: FtColors.background,
     gap: 12,
   },
-  brand: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: FtColors.text,
-    letterSpacing: 0.5,
+  eyebrow: {
+    fontSize: 11,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    color: FtColors.accentMuted,
+    marginBottom: 8,
   },
-  tagline: { marginTop: 8, fontSize: 16, color: FtColors.textMuted },
+  brand: {
+    fontSize: 36,
+    fontWeight: '300',
+    color: FtColors.text,
+    letterSpacing: 2,
+  },
+  brandRule: {
+    marginTop: 14,
+    width: 48,
+    height: 2,
+    backgroundColor: FtColors.accent,
+    opacity: 0.85,
+    borderRadius: 1,
+  },
+  tagline: { marginTop: 16, fontSize: 15, lineHeight: 22, color: FtColors.textMuted, maxWidth: 300 },
   card: {
-    marginTop: 28,
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: FtColors.surface,
+    marginTop: 32,
+    padding: 22,
+    borderRadius: 16,
+    backgroundColor: FtColors.surfaceElevated,
     borderWidth: 1,
-    borderColor: FtColors.border,
+    borderColor: FtColors.borderSubtle,
     gap: 12,
   },
   cardLabel: { fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: FtColors.textMuted },
@@ -125,17 +142,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: FtColors.accent,
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
   },
-  primaryBtnText: { color: '#FFFBEB', fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
   secondaryBtn: {
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: FtColors.border,
-    backgroundColor: FtColors.background,
+    backgroundColor: FtColors.surface,
   },
   secondaryBtnText: { color: FtColors.text, fontSize: 16, fontWeight: '600' },
   ghostBtn: { paddingVertical: 8, alignItems: 'center' },

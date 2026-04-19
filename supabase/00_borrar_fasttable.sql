@@ -1,7 +1,7 @@
 -- =============================================================================
 -- BORRADO COMPLETO de objetos FastTable en el esquema public.
 -- No borra auth.users ni tablas del sistema de Supabase.
--- Ejecuta UNA VEZ en SQL Editor, luego schema_completo_es.sql
+-- Ejecuta UNA VEZ en SQL Editor, luego 01_reconstruir_db.sql
 -- =============================================================================
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -22,6 +22,10 @@ DROP FUNCTION IF EXISTS public.waiter_resolve_reservation(uuid, boolean) CASCADE
 DROP FUNCTION IF EXISTS public.crear_reserva_mesa(uuid, timestamptz, int, text) CASCADE;
 DROP FUNCTION IF EXISTS public.cancelar_reserva_mesa(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.personal_resolver_reserva(uuid, boolean) CASCADE;
+DROP FUNCTION IF EXISTS public.personal_atender_reserva(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.personal_desasignar_mesa(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.personal_liberar_mesa_atendida(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.tr_mesas_al_liberar_mesero() CASCADE;
 
 -- Tablas (nombres en inglés antiguos + español)
 DROP TABLE IF EXISTS public.eventos_auditoria CASCADE;
