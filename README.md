@@ -1,50 +1,109 @@
-# Welcome to your Expo app 👋
+<div align="center">
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+<pre>
+╔═══════════════════════════════════════════════════════════╗
+║                        FastTable                          ║
+║         Reservas · menú · cocina · sala · gerencia        ║
+╚═══════════════════════════════════════════════════════════╝
+</pre>
 
-## Get started
+[![IPN](https://img.shields.io/badge/IPN-Instituto_Polit%C3%A9cnico_Nacional-6B1520?style=for-the-badge)](https://www.ipn.mx)
+[![Stack](https://img.shields.io/badge/Stack-TypeScript_·_React_Native_·_Supabase-1e3a5f?style=for-the-badge)](https://github.com/aletzsc/FastTable)
 
-1. Install dependencies
+<br />
 
-   ```bash
-   npm install
-   ```
+</div>
 
-2. Start the app
+Aplicación móvil para **operar un restaurante de punta a punta**: el comensal reserva, ordena y consulta su cuenta; el personal atiende mesas, solicitudes y reservas; cocina recibe pedidos y administra la carta; gerencia visualiza indicadores. Todo sobre **un backend único** (PostgreSQL, políticas RLS, funciones RPC y **Realtime** para reflejar cambios sin recargar a mano).
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## Funciones por rol
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+| Rol | Capacidades principales |
+|-----|-------------------------|
+| Comensal | Mesas y reservas, carta, pedidos a cocina, cuenta estimada, fila virtual, solicitudes |
+| Sala (mesero / anfitrión) | Reservas a atender, solicitudes, mesas asignadas, control de ocupación |
+| Cocina | Cola de pedidos, disponibilidad de platos (centro de control) |
+| Gerencia | Indicadores (ingresos, platos, equipo, no disponibles) |
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## Arquitectura
 
-When you're ready, run:
-
-```bash
-npm run reset-project
+```mermaid
+flowchart TB
+  subgraph cliente["Cliente móvil"]
+    C[Comensal]
+    P[Personal]
+  end
+  subgraph supa["Supabase"]
+    DB[(PostgreSQL + RLS)]
+    A[Auth]
+    R[Realtime]
+    F[RPC / negocio]
+  end
+  C --> DB
+  P --> DB
+  C --> A
+  P --> A
+  DB --> R
+  F --> DB
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+La **fuente de verdad** es la base de datos; la app solo orquesta permisos y experiencia por rol.
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## Requisitos
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **Node.js** (LTS) y **npm**
+- Proyecto **Supabase** con el esquema aplicado: ver `supabase/EJECUCION.txt`
+- Archivo **`.env`** con `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY` (plantilla: `.env.example`). La *service role* solo en máquina local para scripts administrativos, nunca en builds públicos.
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## Arranque rápido
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npm install
+cp .env.example .env
+# Edita .env con tu proyecto Supabase
+npm start
+```
+
+Cuentas demo del personal: `supabase/DEMO_CUENTAS.txt` · scripts `npm run demo:workers` y `npm run staff:console` (requieren `SUPABASE_SERVICE_ROLE_KEY` en local).
+
+---
+
+## Scripts
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm start` | Desarrollo (Expo) |
+| `npm run demo:workers` | Alta de usuarios demo de personal |
+| `npm run staff:console` | Consola local para gestionar fichas de personal |
+
+---
+
+## Base de datos
+
+| Recurso | Contenido |
+|---------|-----------|
+| `supabase/01_reconstruir_db.sql` | Esquema completo (nuevas instalaciones) |
+| `supabase/EJECUCION.txt` | Orden de ejecución y parches |
+| `supabase/GUIA_ALTERAR_DB.txt` | Guía para alterar el esquema con cuidado |
+
+---
+
+<div align="center">
+
+**Instituto Politécnico Nacional** · *La técnica al servicio de la patria*
+
+[![Portal IPN](https://img.shields.io/badge/ipn.mx-Portal_oficial-6B1520?style=flat-square)](https://www.ipn.mx)
+
+<br />
+
+<sub>FastTable — documentación del producto. El runtime (Expo / React Native) es el vehículo; el dominio es la operación del restaurante.</sub>
+
+</div>
