@@ -1,35 +1,80 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Redirect, Tabs } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/contexts/auth-context';
+import { FtColors } from '@/constants/fasttable';
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function GuestTabLayout() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={styles.boot}>
+        <ActivityIndicator color={FtColors.accent} size="large" />
+      </View>
+    );
+  }
+
+  if (!session) {
+    return <Redirect href="/" />;
+  }
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
+        headerShown: true,
+        headerStyle: { backgroundColor: FtColors.surface },
+        headerTitleStyle: { color: FtColors.text, fontWeight: '600' },
+        headerShadowVisible: false,
+        tabBarActiveTintColor: FtColors.accent,
+        tabBarInactiveTintColor: FtColors.textMuted,
+        tabBarStyle: {
+          backgroundColor: FtColors.surface,
+          borderTopColor: FtColors.border,
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Mesas',
+          tabBarLabel: 'Mesas',
+          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="queue"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Fila',
+          tabBarLabel: 'Fila',
+          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="menu"
+        options={{
+          title: 'Menú',
+          tabBarLabel: 'Menú',
+          tabBarIcon: ({ color, size }) => <Ionicons name="restaurant-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="service"
+        options={{
+          title: 'Servicio',
+          tabBarLabel: 'Servicio',
+          tabBarIcon: ({ color, size }) => <Ionicons name="hand-left-outline" color={color} size={size} />,
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  boot: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: FtColors.background,
+  },
+});

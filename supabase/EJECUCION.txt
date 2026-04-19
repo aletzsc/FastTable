@@ -1,0 +1,12 @@
+FastTable — qué ejecutar en Supabase (SQL Editor)
+
+OPCIÓN A — Base vacía, todo en uno
+  1) (Opcional) 00_borrar_todo_fasttable.sql  → solo si quedan tablas/funciones viejas
+  2) montar_db_desde_cero.sql                → esquema + RLS + funciones + datos de ejemplo (BEGIN/COMMIT)
+
+OPCIÓN B — Por partes (si el pegado largo falla)
+  1) (Opcional) 00_borrar_todo_fasttable.sql
+  2) schema_completo_es.sql                  → tablas, triggers, RLS, RPC (sin seed)
+  3) seed_datos_es.sql                       → zonas, mesas, menú de ejemplo
+
+No uses los scripts antiguos en inglés (schema.sql, reservations.sql, seed.sql): fueron eliminados del repo.
