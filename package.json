@@ -9,6 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "marketing:start": "node marketing-site/server.js",
+    "marketing:dev": "node --watch marketing-site/server.js",
     "demo:workers": "node scripts/crear-cuentas-demo-trabajadores.mjs",
     "staff:console": "node scripts/ft-staff-console.mjs"
   },
