@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
-import { FtColors } from '@/constants/fasttable';
+import { Comensal } from '@/constants/theme-comensal';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function WelcomeScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator color={FtColors.accent} />
+        <ActivityIndicator color={Comensal.accent} />
         <Text style={styles.muted}>Cargando…</Text>
       </SafeAreaView>
     );
@@ -93,70 +94,86 @@ export default function WelcomeScreen() {
   );
 }
 
+const cardShadow =
+  Platform.OS === 'ios'
+    ? {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 20,
+      }
+    : { elevation: 6 };
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: FtColors.background },
-  scroll: { padding: 24, paddingBottom: 40 },
+  safe: { flex: 1, backgroundColor: Comensal.background },
+  scroll: { padding: 24, paddingTop: 30, paddingBottom: 44 },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: FtColors.background,
+    backgroundColor: Comensal.background,
     gap: 12,
   },
   eyebrow: {
     fontSize: 11,
-    letterSpacing: 2.5,
+    letterSpacing: 3.4,
     textTransform: 'uppercase',
-    color: FtColors.accentMuted,
-    marginBottom: 8,
+    color: Comensal.accentMuted,
+    marginBottom: 12,
   },
   brand: {
-    fontSize: 36,
-    fontWeight: '300',
-    color: FtColors.text,
-    letterSpacing: 2,
+    fontSize: 38,
+    fontWeight: '700',
+    color: Comensal.text,
+    letterSpacing: 1.2,
   },
   brandRule: {
-    marginTop: 14,
-    width: 48,
-    height: 2,
-    backgroundColor: FtColors.accent,
-    opacity: 0.85,
-    borderRadius: 1,
+    marginTop: 16,
+    width: 72,
+    height: 3,
+    borderRadius: 99,
+    backgroundColor: Comensal.accent,
+    opacity: 1,
   },
-  tagline: { marginTop: 16, fontSize: 15, lineHeight: 22, color: FtColors.textMuted, maxWidth: 300 },
+  tagline: { marginTop: 18, fontSize: 16, lineHeight: 25, color: Comensal.textMuted, maxWidth: 320 },
   card: {
-    marginTop: 32,
-    padding: 22,
-    borderRadius: 16,
-    backgroundColor: FtColors.surfaceElevated,
+    marginTop: 36,
+    padding: 24,
+    borderRadius: Comensal.radiusLg,
+    backgroundColor: Comensal.surfaceElevated,
     borderWidth: 1,
-    borderColor: FtColors.borderSubtle,
-    gap: 12,
+    borderColor: Comensal.border,
+    gap: 14,
+    ...cardShadow,
   },
-  cardLabel: { fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: FtColors.textMuted },
-  cardName: { fontSize: 22, fontWeight: '600', color: FtColors.text },
-  cardEmail: { fontSize: 15, color: FtColors.textMuted },
-  cardBody: { fontSize: 15, lineHeight: 22, color: FtColors.text },
+  cardLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    color: Comensal.textFaint,
+  },
+  cardName: { fontSize: 24, fontWeight: '700', color: Comensal.text, letterSpacing: 0.2 },
+  cardEmail: { fontSize: 14, color: Comensal.textMuted },
+  cardBody: { fontSize: 15, lineHeight: 24, color: Comensal.textMuted },
   primaryBtn: {
-    marginTop: 8,
-    backgroundColor: FtColors.accent,
-    paddingVertical: 14,
-    borderRadius: 999,
+    marginTop: 4,
+    backgroundColor: Comensal.accent,
+    paddingVertical: 15,
+    borderRadius: Comensal.radiusMd,
     alignItems: 'center',
   },
-  primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: Comensal.onAccent, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
   secondaryBtn: {
     paddingVertical: 14,
-    borderRadius: 999,
+    borderRadius: Comensal.radiusMd,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: FtColors.border,
-    backgroundColor: FtColors.surface,
+    borderColor: Comensal.border,
+    backgroundColor: Comensal.surfaceInput,
   },
-  secondaryBtnText: { color: FtColors.text, fontSize: 16, fontWeight: '600' },
+  secondaryBtnText: { color: Comensal.text, fontSize: 15, fontWeight: '500' },
   ghostBtn: { paddingVertical: 8, alignItems: 'center' },
-  ghostBtnText: { fontSize: 14, color: FtColors.textMuted, textDecorationLine: 'underline' },
+  ghostBtnText: { fontSize: 13, color: Comensal.textMuted, textDecorationLine: 'underline' },
   ghostDisabled: { opacity: 0.6 },
-  muted: { color: FtColors.textMuted, fontSize: 14 },
+  muted: { color: Comensal.textMuted, fontSize: 14 },
 });

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '@/contexts/auth-context';
-import { FtColors } from '@/constants/fasttable';
+import { Comensal } from '@/constants/theme-comensal';
 import { supabase } from '@/lib/supabase';
 
 export default function ServiceScreen() {
@@ -61,7 +61,7 @@ export default function ServiceScreen() {
           value={tableCode}
           onChangeText={setTableCode}
           placeholder="Ej. M1"
-          placeholderTextColor={FtColors.textMuted}
+          placeholderTextColor={Comensal.textMuted}
           autoCapitalize="characters"
           style={styles.input}
         />
@@ -73,7 +73,7 @@ export default function ServiceScreen() {
           value={message}
           onChangeText={setMessage}
           placeholder="Ej. traer agua, cuenta, cubiertos…"
-          placeholderTextColor={FtColors.textMuted}
+          placeholderTextColor={Comensal.textMuted}
           multiline
           style={[styles.input, styles.inputMulti]}
         />
@@ -87,43 +87,43 @@ export default function ServiceScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: FtColors.background },
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 36 },
+  scroll: { flex: 1, backgroundColor: Comensal.background },
+  content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 40 },
   eyebrow: {
     fontSize: 11,
-    letterSpacing: 2.5,
+    letterSpacing: 3,
     textTransform: 'uppercase',
-    color: FtColors.accentMuted,
-    marginBottom: 6,
+    color: Comensal.accentMuted,
+    marginBottom: 8,
   },
-  intro: { fontSize: 15, color: FtColors.textMuted, marginBottom: 18, lineHeight: 22 },
+  intro: { fontSize: 15, color: Comensal.textMuted, marginBottom: 20, lineHeight: 22 },
   card: {
     padding: 18,
-    borderRadius: 14,
-    backgroundColor: FtColors.surfaceElevated,
+    borderRadius: Comensal.radiusMd,
+    backgroundColor: Comensal.surfaceElevated,
     borderWidth: 1,
-    borderColor: FtColors.borderSubtle,
-    marginBottom: 12,
+    borderColor: Comensal.border,
+    marginBottom: 14,
   },
-  label: { fontSize: 13, fontWeight: '600', color: FtColors.text, marginBottom: 8 },
+  label: { fontSize: 13, fontWeight: '700', color: Comensal.text, marginBottom: 8 },
   input: {
     borderWidth: 1,
-    borderColor: FtColors.borderSubtle,
+    borderColor: Comensal.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: FtColors.text,
-    backgroundColor: FtColors.surface,
+    color: Comensal.text,
+    backgroundColor: Comensal.surfaceInput,
   },
   inputMulti: { minHeight: 100, textAlignVertical: 'top' },
   primaryBtn: {
-    backgroundColor: FtColors.accent,
-    paddingVertical: 14,
+    backgroundColor: Comensal.accent,
+    paddingVertical: 15,
     borderRadius: 999,
     alignItems: 'center',
     marginTop: 4,
   },
-  primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: Comensal.onAccent, fontSize: 16, fontWeight: '800' },
   btnDisabled: { opacity: 0.65 },
 });

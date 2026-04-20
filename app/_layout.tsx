@@ -5,24 +5,25 @@ import 'react-native-reanimated';
 
 import { DeepLinkBridge } from '@/components/deep-link-bridge';
 import { AuthProvider } from '@/contexts/auth-context';
-import { FtColors } from '@/constants/fasttable';
+import { Comensal } from '@/constants/theme-comensal';
 
-const FastTableTheme = {
+/** Navegación raíz: comensal e invitado (bronce / azul carbón). El stack `worker` redefine estilos propios. */
+const RootNavigationTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: FtColors.accent,
-    background: FtColors.background,
-    card: FtColors.surfaceElevated,
-    text: FtColors.text,
-    border: FtColors.border,
-    notification: FtColors.accentMuted,
+    primary: Comensal.accent,
+    background: Comensal.background,
+    card: Comensal.surfaceElevated,
+    text: Comensal.text,
+    border: Comensal.border,
+    notification: Comensal.accentMuted,
   },
 };
 
 export default function RootLayout() {
   return (
-    <ThemeProvider value={FastTableTheme}>
+    <ThemeProvider value={RootNavigationTheme}>
       <AuthProvider>
         <DeepLinkBridge />
         <Stack>

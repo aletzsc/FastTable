@@ -27,6 +27,22 @@ type GerenteStats = {
   no_disponibles: { nombre: string }[];
 };
 
+type DailyMetric = { label: string; value: number };
+type LiveSnapshot = {
+  mesasLibres: number;
+  mesasOcupadas: number;
+  mesasReservadas: number;
+  solicitudesAbiertas: number;
+  reservasActivas: number;
+  pedidosPendientes: number;
+};
+
+function priceFromItem(raw: unknown): number {
+  if (raw == null) return 0;
+  const z = Array.isArray(raw) ? raw[0] : raw;
+  return (z as { precio_centavos?: number })?.precio_centavos ?? 0;
+}
+
 const cardShadow =
   Platform.OS === 'ios'
     ? { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8 }
@@ -51,12 +67,40 @@ export default function GerenteScreen() {
   const router = useRouter();
   const { session, staffMember, loading: authLoading, signOut } = useAuth();
   const [stats, setStats] = useState<GerenteStats | null>(null);
+  const [dailyRevenue, setDailyRevenue] = useState<DailyMetric[]>([]);
+  const [snapshot, setSnapshot] = useState<LiveSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
-    const { data, error } = await supabase.rpc('gerente_dashboard_stats');
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - 6);
+
+    const [statsRes, pedidosRes, mesasRes, solRes, reservasRes, cocinaPendRes] = await Promise.all([
+      supabase.rpc('gerente_dashboard_stats'),
+      supabase
+        .from('pedidos_cocina')
+        .select('creado_en, cantidad, items_menu ( precio_centavos )')
+        .gte('creado_en', weekStart.toISOString())
+        .order('creado_en', { ascending: true }),
+      supabase.from('mesas').select('estado'),
+      supabase
+        .from('solicitudes_servicio')
+        .select('*', { count: 'exact', head: true })
+        .eq('estado', 'abierta'),
+      supabase
+        .from('reservas_mesa')
+        .select('*', { count: 'exact', head: true })
+        .eq('ciclo', 'activa'),
+      supabase
+        .from('pedidos_cocina')
+        .select('*', { count: 'exact', head: true })
+        .eq('estado', 'pendiente'),
+    ]);
+
+    const { data, error } = statsRes;
     if (error) {
       if (!silent) {
         if (error.message.includes('solo_gerente')) {
@@ -69,6 +113,40 @@ export default function GerenteScreen() {
       return;
     }
     setStats(data as GerenteStats);
+
+    const byDay = new Map<string, number>();
+    for (let i = 0; i < 7; i += 1) {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      byDay.set(key, 0);
+    }
+
+    for (const row of pedidosRes.data ?? []) {
+      const key = new Date(row.creado_en).toISOString().slice(0, 10);
+      if (!byDay.has(key)) continue;
+      const subtotal = row.cantidad * priceFromItem(row.items_menu);
+      byDay.set(key, (byDay.get(key) ?? 0) + subtotal);
+    }
+    setDailyRevenue(
+      [...byDay.entries()].map(([isoDay, total]) => {
+        const d = new Date(`${isoDay}T00:00:00`);
+        return { label: d.toLocaleDateString('es', { weekday: 'short' }), value: total };
+      }),
+    );
+
+    const mesas = mesasRes.data ?? [];
+    const libres = mesas.filter((m) => m.estado === 'libre').length;
+    const ocupadas = mesas.filter((m) => m.estado === 'ocupada').length;
+    const reservadas = mesas.filter((m) => m.estado === 'reservada').length;
+    setSnapshot({
+      mesasLibres: libres,
+      mesasOcupadas: ocupadas,
+      mesasReservadas: reservadas,
+      solicitudesAbiertas: solRes.count ?? 0,
+      reservasActivas: reservasRes.count ?? 0,
+      pedidosPendientes: cocinaPendRes.count ?? 0,
+    });
   }, []);
 
   useFocusEffect(
@@ -119,6 +197,8 @@ export default function GerenteScreen() {
     return <Redirect href="/worker" />;
   }
 
+  const maxRevenue = Math.max(1, ...dailyRevenue.map((d) => d.value));
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -161,6 +241,57 @@ export default function GerenteScreen() {
           ) : (
             <Text style={styles.muted}>Aún no hay pedidos suficientes.</Text>
           )}
+        </View>
+
+        <View style={[styles.card, cardShadow]}>
+          <View style={styles.cardHead}>
+            <Ionicons name="bar-chart-outline" size={22} color={FtColors.accent} />
+            <Text style={styles.cardTitle}>Ingresos últimos 7 días</Text>
+          </View>
+          <View style={styles.chartRow}>
+            {dailyRevenue.map((d) => (
+              <View key={d.label} style={styles.barCol}>
+                <View style={styles.barTrack}>
+                  <View style={[styles.barFill, { height: `${Math.max(6, (d.value / maxRevenue) * 100)}%` }]} />
+                </View>
+                <Text style={styles.barLabel}>{d.label}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.cardHint}>Comparativa diaria para detectar picos de demanda.</Text>
+        </View>
+
+        <View style={[styles.card, cardShadow]}>
+          <View style={styles.cardHead}>
+            <Ionicons name="pulse-outline" size={22} color={FtColors.success} />
+            <Text style={styles.cardTitle}>Estado operativo en vivo</Text>
+          </View>
+          <View style={styles.metricsGrid}>
+            <View style={styles.metricPill}>
+              <Text style={styles.metricValue}>{snapshot?.mesasLibres ?? '—'}</Text>
+              <Text style={styles.metricLabel}>Mesas libres</Text>
+            </View>
+            <View style={styles.metricPill}>
+              <Text style={styles.metricValue}>{snapshot?.mesasOcupadas ?? '—'}</Text>
+              <Text style={styles.metricLabel}>Mesas ocupadas</Text>
+            </View>
+            <View style={styles.metricPill}>
+              <Text style={styles.metricValue}>{snapshot?.mesasReservadas ?? '—'}</Text>
+              <Text style={styles.metricLabel}>Mesas reservadas</Text>
+            </View>
+            <View style={styles.metricPill}>
+              <Text style={styles.metricValue}>{snapshot?.solicitudesAbiertas ?? '—'}</Text>
+              <Text style={styles.metricLabel}>Solicitudes abiertas</Text>
+            </View>
+            <View style={styles.metricPill}>
+              <Text style={styles.metricValue}>{snapshot?.reservasActivas ?? '—'}</Text>
+              <Text style={styles.metricLabel}>Reservas activas</Text>
+            </View>
+            <View style={styles.metricPill}>
+              <Text style={styles.metricValue}>{snapshot?.pedidosPendientes ?? '—'}</Text>
+              <Text style={styles.metricLabel}>Pedidos pendientes</Text>
+            </View>
+          </View>
         </View>
 
         <View style={[styles.card, cardShadow]}>
@@ -242,6 +373,49 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '800', color: FtColors.text, flex: 1 },
   bigNumber: { fontSize: 28, fontWeight: '800', color: FtColors.accent, letterSpacing: 0.5 },
   emphasis: { fontSize: 18, fontWeight: '700', color: FtColors.text },
+  chartRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 2,
+  },
+  barCol: { flex: 1, alignItems: 'center' },
+  barTrack: {
+    width: '100%',
+    height: 86,
+    borderRadius: 10,
+    backgroundColor: FtColors.surface,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: FtColors.borderSubtle,
+  },
+  barFill: {
+    width: '100%',
+    backgroundColor: FtColors.accent,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+  },
+  barLabel: { marginTop: 6, fontSize: 11, color: FtColors.textMuted, textTransform: 'capitalize' },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 2,
+  },
+  metricPill: {
+    width: '31%',
+    minWidth: 96,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: FtColors.surface,
+    borderWidth: 1,
+    borderColor: FtColors.borderSubtle,
+  },
+  metricValue: { fontSize: 18, fontWeight: '800', color: FtColors.text },
+  metricLabel: { marginTop: 2, fontSize: 11, color: FtColors.textMuted, lineHeight: 14 },
   cardHint: { fontSize: 12, color: FtColors.textMuted, marginTop: 8, lineHeight: 18 },
   muted: { fontSize: 14, color: FtColors.textFaint },
   equipoRow: {

@@ -3,7 +3,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/contexts/auth-context';
-import { FtColors } from '@/constants/fasttable';
+import { Comensal } from '@/constants/theme-comensal';
 
 export default function GuestTabLayout() {
   const { session, loading } = useAuth();
@@ -11,7 +11,7 @@ export default function GuestTabLayout() {
   if (loading) {
     return (
       <View style={styles.boot}>
-        <ActivityIndicator color={FtColors.accent} size="large" />
+        <ActivityIndicator color={Comensal.accent} size="large" />
       </View>
     );
   }
@@ -24,19 +24,26 @@ export default function GuestTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        headerStyle: { backgroundColor: FtColors.background },
-        headerTitleStyle: { color: FtColors.text, fontWeight: '500', fontSize: 17, letterSpacing: 0.2 },
-        headerShadowVisible: false,
-        tabBarActiveTintColor: FtColors.accent,
-        tabBarInactiveTintColor: FtColors.textFaint,
-        tabBarStyle: {
-          backgroundColor: FtColors.surface,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: FtColors.borderSubtle,
-          height: 58,
-          paddingBottom: 6,
+        headerStyle: { backgroundColor: Comensal.surface },
+        headerTitleStyle: {
+          color: Comensal.text,
+          fontWeight: '700',
+          fontSize: 18,
+          letterSpacing: 0.35,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '500', letterSpacing: 0.3 },
+        headerShadowVisible: false,
+        headerTintColor: Comensal.accent,
+        tabBarActiveTintColor: Comensal.accent,
+        tabBarInactiveTintColor: Comensal.textFaint,
+        tabBarStyle: {
+          backgroundColor: Comensal.surfaceElevated,
+          borderTopWidth: 1,
+          borderTopColor: Comensal.border,
+          height: 66,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
       }}>
       <Tabs.Screen
         name="index"
@@ -79,6 +86,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: FtColors.background,
+    backgroundColor: Comensal.background,
   },
 });

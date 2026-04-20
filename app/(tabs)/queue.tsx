@@ -13,7 +13,7 @@ import {
 import { useFocusEffect } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
-import { FtColors } from '@/constants/fasttable';
+import { Comensal } from '@/constants/theme-comensal';
 import { REALTIME_QUEUE_TAB, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { supabase } from '@/lib/supabase';
 
@@ -136,14 +136,14 @@ export default function QueueScreen() {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor={FtColors.accent}
-          colors={[FtColors.accent]}
+          tintColor={Comensal.accent}
+          colors={[Comensal.accent]}
         />
       }>
       <Text style={styles.eyebrow}>Espera</Text>
       <Text style={styles.intro}>Entra en la fila o revisa tu posición.</Text>
 
-      {loading && !refreshing ? <ActivityIndicator color={FtColors.accent} /> : null}
+      {loading && !refreshing ? <ActivityIndicator color={Comensal.accent} /> : null}
 
       <View style={styles.card}>
         <Text style={styles.label}>Tu posición</Text>
@@ -160,7 +160,7 @@ export default function QueueScreen() {
           onChangeText={setPartySize}
           keyboardType="number-pad"
           placeholder="2"
-          placeholderTextColor={FtColors.textMuted}
+          placeholderTextColor={Comensal.textMuted}
           style={styles.input}
         />
       </View>
@@ -171,7 +171,7 @@ export default function QueueScreen() {
           value={note}
           onChangeText={setNote}
           placeholder="Ej. silla para niño, alergias…"
-          placeholderTextColor={FtColors.textMuted}
+          placeholderTextColor={Comensal.textMuted}
           multiline
           style={[styles.input, styles.inputMulti]}
         />
@@ -191,55 +191,55 @@ export default function QueueScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: FtColors.background },
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 36 },
+  container: { flex: 1, backgroundColor: Comensal.background },
+  content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 40 },
   eyebrow: {
     fontSize: 11,
-    letterSpacing: 2.5,
+    letterSpacing: 3,
     textTransform: 'uppercase',
-    color: FtColors.accentMuted,
-    marginBottom: 6,
+    color: Comensal.accentMuted,
+    marginBottom: 8,
   },
-  intro: { fontSize: 15, color: FtColors.textMuted, marginBottom: 18, lineHeight: 22 },
+  intro: { fontSize: 15, color: Comensal.textMuted, marginBottom: 20, lineHeight: 22 },
   card: {
     padding: 18,
-    borderRadius: 14,
-    backgroundColor: FtColors.surfaceElevated,
+    borderRadius: Comensal.radiusMd,
+    backgroundColor: Comensal.surfaceElevated,
     borderWidth: 1,
-    borderColor: FtColors.borderSubtle,
-    marginBottom: 12,
+    borderColor: Comensal.border,
+    marginBottom: 14,
   },
-  label: { fontSize: 13, fontWeight: '600', color: FtColors.text, marginBottom: 8 },
-  big: { fontSize: 40, fontWeight: '700', color: FtColors.accent },
-  meta: { fontSize: 13, color: FtColors.textMuted, marginTop: 4 },
+  label: { fontSize: 13, fontWeight: '700', color: Comensal.text, marginBottom: 8, letterSpacing: 0.2 },
+  big: { fontSize: 44, fontWeight: '800', color: Comensal.accent },
+  meta: { fontSize: 13, color: Comensal.textMuted, marginTop: 4 },
   input: {
     borderWidth: 1,
-    borderColor: FtColors.borderSubtle,
+    borderColor: Comensal.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: FtColors.text,
-    backgroundColor: FtColors.surface,
+    color: Comensal.text,
+    backgroundColor: Comensal.surfaceInput,
   },
   inputMulti: { minHeight: 88, textAlignVertical: 'top' },
   primaryBtn: {
-    backgroundColor: FtColors.accent,
-    paddingVertical: 14,
+    backgroundColor: Comensal.accent,
+    paddingVertical: 15,
     borderRadius: 999,
     alignItems: 'center',
     marginTop: 4,
   },
-  primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: Comensal.onAccent, fontSize: 16, fontWeight: '800' },
   secondaryBtn: {
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: FtColors.border,
-    backgroundColor: FtColors.surfaceElevated,
+    borderColor: Comensal.border,
+    backgroundColor: Comensal.surfaceInput,
     marginTop: 4,
   },
-  secondaryBtnText: { color: FtColors.text, fontSize: 16, fontWeight: '600' },
+  secondaryBtnText: { color: Comensal.text, fontSize: 16, fontWeight: '700' },
   btnDisabled: { opacity: 0.65 },
 });

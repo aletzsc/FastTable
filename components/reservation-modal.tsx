@@ -15,7 +15,8 @@ import { Image } from 'expo-image';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import DateTimePicker from '@react-native-community/datetimepicker/src/datetimepicker';
 
-import { FtColors } from '@/constants/fasttable';
+import { Comensal } from '@/constants/theme-comensal';
+import { tableImageUrl } from '@/lib/table-image';
 
 type Props = {
   visible: boolean;
@@ -29,10 +30,6 @@ type Props = {
   onClose: () => void;
   onConfirm: (scheduledAt: Date, partySize: number, note: string) => Promise<void>;
 };
-
-function placeholderTableImage(code: string): string {
-  return `https://picsum.photos/seed/${encodeURIComponent(code)}-mesa/900/480`;
-}
 
 const minFutureDate = () => {
   const d = new Date();
@@ -135,7 +132,7 @@ export function ReservationModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}>
             <Image
-              source={{ uri: tableHeroImageUrl || placeholderTableImage(tableCode) }}
+              source={{ uri: tableImageUrl(tableCode, tableHeroImageUrl) }}
               style={styles.heroImg}
               contentFit="cover"
               transition={200}
@@ -165,7 +162,7 @@ export function ReservationModal({
                   onChange={onIosChange}
                   locale="es_ES"
                   themeVariant="dark"
-                  accentColor={FtColors.accent}
+                  accentColor={Comensal.accent}
                   minimumDate={minFutureDate()}
                   style={styles.iosPicker}
                 />
@@ -209,7 +206,7 @@ export function ReservationModal({
               keyboardType="number-pad"
               style={styles.input}
               placeholder="2"
-              placeholderTextColor={FtColors.textFaint}
+              placeholderTextColor={Comensal.textFaint}
             />
 
             <Text style={styles.label}>Nota</Text>
@@ -217,7 +214,7 @@ export function ReservationModal({
               value={note}
               onChangeText={setNote}
               placeholder="Opcional"
-              placeholderTextColor={FtColors.textFaint}
+              placeholderTextColor={Comensal.textFaint}
               style={[styles.input, styles.inputMulti]}
               multiline
             />
@@ -231,7 +228,7 @@ export function ReservationModal({
                 onPress={submit}
                 disabled={busy}>
                 {busy ? (
-                  <ActivityIndicator color={FtColors.onAccent} />
+                  <ActivityIndicator color={Comensal.onAccent} />
                 ) : (
                   <Text style={styles.primaryText}>Confirmar</Text>
                 )}
@@ -247,16 +244,16 @@ export function ReservationModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    backgroundColor: Comensal.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: FtColors.surfaceElevated,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    backgroundColor: Comensal.surfaceElevated,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     maxHeight: Platform.OS === 'ios' ? '88%' : '92%',
     borderWidth: 1,
-    borderColor: FtColors.borderSubtle,
+    borderColor: Comensal.borderSubtle,
     borderBottomWidth: 0,
   },
   sheetHandle: {
@@ -264,7 +261,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: FtColors.border,
+    backgroundColor: Comensal.border,
     marginTop: 10,
     marginBottom: 4,
   },
@@ -275,29 +272,29 @@ const styles = StyleSheet.create({
   },
   heroImg: {
     width: '100%',
-    height: 180,
-    borderRadius: 14,
+    height: 190,
+    borderRadius: Comensal.radiusMd,
     marginBottom: 16,
-    backgroundColor: '#1a1612',
+    backgroundColor: Comensal.heroImgFallback,
   },
   kicker: {
     fontSize: 11,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: FtColors.accentMuted,
+    color: Comensal.accentMuted,
     marginBottom: 6,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: FtColors.text,
+    fontSize: 30,
+    fontWeight: '700',
+    color: Comensal.text,
     letterSpacing: 0.5,
     marginBottom: 6,
   },
-  metaLine: { fontSize: 13, color: FtColors.textFaint, marginBottom: 10 },
+  metaLine: { fontSize: 13, color: Comensal.textFaint, marginBottom: 10 },
   desc: {
     fontSize: 14,
-    color: FtColors.textMuted,
+    color: Comensal.textMuted,
     lineHeight: 22,
     marginBottom: 22,
   },
@@ -305,55 +302,62 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: FtColors.accentMuted,
+    color: Comensal.accentMuted,
     marginBottom: 6,
   },
   lead: {
     fontSize: 14,
-    color: FtColors.textMuted,
+    color: Comensal.textMuted,
     marginBottom: 20,
   },
   label: {
     fontSize: 12,
     letterSpacing: 0.3,
-    color: FtColors.textFaint,
+    color: Comensal.textFaint,
     marginBottom: 8,
     marginTop: 6,
     textTransform: 'uppercase',
   },
   iosPickerShell: {
     overflow: 'hidden',
-    marginHorizontal: -16,
+    alignItems: 'center',
+    marginHorizontal: 0,
     marginBottom: 8,
     minHeight: 380,
     justifyContent: 'center',
   },
   iosPicker: {
     width: '100%',
+    maxWidth: 340,
     height: 380,
   },
   dateTrigger: {
     paddingVertical: 14,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: FtColors.border,
+    paddingHorizontal: 12,
+    borderRadius: Comensal.radiusSm,
+    borderWidth: 1,
+    borderColor: Comensal.border,
+    backgroundColor: Comensal.surfaceInput,
   },
   dateTriggerText: {
     fontSize: 17,
-    color: FtColors.text,
+    color: Comensal.text,
     fontWeight: '400',
   },
   dateTriggerHint: {
     fontSize: 12,
-    color: FtColors.textFaint,
+    color: Comensal.textFaint,
     marginTop: 4,
   },
   input: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: FtColors.border,
+    borderWidth: 1,
+    borderColor: Comensal.border,
+    borderRadius: Comensal.radiusSm,
+    backgroundColor: Comensal.surfaceInput,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: FtColors.text,
+    color: Comensal.text,
   },
   inputMulti: { minHeight: 72, textAlignVertical: 'top' },
   actions: {
@@ -367,16 +371,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: FtColors.border,
+    borderColor: Comensal.border,
   },
-  secondaryText: { fontSize: 15, color: FtColors.textMuted, fontWeight: '500' },
+  secondaryText: { fontSize: 15, color: Comensal.textMuted, fontWeight: '500' },
   primary: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 999,
-    backgroundColor: FtColors.accent,
+    backgroundColor: Comensal.accent,
     alignItems: 'center',
   },
   primaryDisabled: { opacity: 0.65 },
-  primaryText: { fontSize: 15, fontWeight: '600', color: FtColors.onAccent, letterSpacing: 0.3 },
+  primaryText: { fontSize: 15, fontWeight: '600', color: Comensal.onAccent, letterSpacing: 0.3 },
 });

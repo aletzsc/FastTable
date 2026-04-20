@@ -8,9 +8,9 @@ export default function WorkerLayout() {
     <SafeAreaProvider>
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: FtColors.surface },
-        headerTintColor: FtColors.text,
-        headerTitleStyle: { fontWeight: '600' },
+        headerStyle: { backgroundColor: FtColors.surfaceElevated },
+        headerTintColor: FtColors.accent,
+        headerTitleStyle: { fontWeight: '700', color: FtColors.text },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: FtColors.background },
       }}>

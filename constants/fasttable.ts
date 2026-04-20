@@ -1,20 +1,21 @@
 /**
- * Paleta oscura elegante (comensal y app): carbón cálido, acento oro apagado.
+ * Paleta base compartida para toda la app (comensal + worker).
+ * Mantiene el mismo lenguaje visual premium usado en comensal.
  */
 export const FtColors = {
-  background: '#070605',
-  surface: '#100e0c',
-  surfaceElevated: '#181512',
-  text: '#f3f0e8',
-  textMuted: '#9c968c',
-  textFaint: '#6b665e',
-  border: '#2a2620',
-  borderSubtle: '#1c1a17',
-  accent: '#c6a85c',
-  accentMuted: '#9e8548',
+  background: '#06080f',
+  surface: '#0f1524',
+  surfaceElevated: '#161f34',
+  text: '#f4f7ff',
+  textMuted: '#a4afc4',
+  textFaint: '#6d7890',
+  border: '#2a3b61',
+  borderSubtle: '#1b2944',
+  accent: '#7c8cff',
+  accentMuted: '#5f6ece',
   /** Texto sobre botones con acento */
-  onAccent: '#12100e',
-  success: '#7dcea0',
-  warning: '#d8b56a',
-  danger: '#e07876',
+  onAccent: '#f5f7ff',
+  success: '#63c8a4',
+  warning: '#f0bd73',
+  danger: '#e47f9e',
 };

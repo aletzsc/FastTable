@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,12 +11,14 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { Image } from 'expo-image';
 
 import { ReservationModal } from '@/components/reservation-modal';
 import { useAuth } from '@/contexts/auth-context';
-import { FtColors } from '@/constants/fasttable';
+import { Comensal } from '@/constants/theme-comensal';
 import { REALTIME_TABLES_SCREEN, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { supabase } from '@/lib/supabase';
+import { tableImageUrl } from '@/lib/table-image';
 
 type EstadoMesa = 'libre' | 'ocupada' | 'reservada';
 
@@ -200,8 +203,8 @@ export default function TablesScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={FtColors.accent}
-            colors={[FtColors.accent]}
+            tintColor={Comensal.accent}
+            colors={[Comensal.accent]}
           />
         }>
         <View style={styles.hero}>
@@ -211,7 +214,7 @@ export default function TablesScreen() {
         </View>
 
         {loading && !refreshing ? (
-          <ActivityIndicator color={FtColors.accent} style={styles.loader} />
+          <ActivityIndicator color={Comensal.accent} style={styles.loader} />
         ) : null}
         {error ? <Text style={styles.err}>{error}</Text> : null}
         {!loading && !error && filtered.length === 0 ? (
@@ -260,30 +263,47 @@ export default function TablesScreen() {
                 <Text style={styles.meta}>
                   {t.nombreZona ?? 'Sin zona'} · {t.capacidad} plazas
                 </Text>
+                <View style={styles.bottomRow}>
+                  <Image
+                    source={{ uri: tableImageUrl(t.codigo, t.imagen_url) }}
+                    style={styles.tableThumb}
+                    contentFit="cover"
+                    transition={160}
+                  />
+                  <View style={styles.sidePanel}>
+                    {myRes ? (
+                      <View style={styles.resBox}>
+                        <Text style={styles.resText}>
+                          Tu reserva ·{' '}
+                          {new Date(myRes.fecha_hora_reserva).toLocaleString('es', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </Text>
+                        <Pressable style={styles.cancelBtn} onPress={() => onCancelReservation(myRes.id)}>
+                          <Text style={styles.cancelBtnText}>Cancelar</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Text style={styles.sideHint}>
+                        {t.estado === 'libre'
+                          ? 'Disponible para reservar'
+                          : t.estado === 'ocupada'
+                            ? 'Mesa ocupada en este momento'
+                            : 'Mesa apartada temporalmente'}
+                      </Text>
+                    )}
 
-                {myRes ? (
-                  <View style={styles.resBox}>
-                    <Text style={styles.resText}>
-                      Tu reserva ·{' '}
-                      {new Date(myRes.fecha_hora_reserva).toLocaleString('es', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </Text>
-                    <Pressable style={styles.cancelBtn} onPress={() => onCancelReservation(myRes.id)}>
-                      <Text style={styles.cancelBtnText}>Cancelar</Text>
-                    </Pressable>
+                    {t.estado === 'libre' && user && !myRes ? (
+                      <Pressable style={styles.reserveBtn} onPress={() => setReserveTable(t)}>
+                        <Text style={styles.reserveBtnText}>Reservar</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
-                ) : null}
-
-                {t.estado === 'libre' && user ? (
-                  <Pressable style={styles.reserveBtn} onPress={() => setReserveTable(t)}>
-                    <Text style={styles.reserveBtnText}>Reservar</Text>
-                  </Pressable>
-                ) : null}
+                </View>
               </View>
             </View>
           );
@@ -304,89 +324,121 @@ export default function TablesScreen() {
   );
 }
 
+const mesaCardShadow =
+  Platform.OS === 'ios'
+    ? {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+      }
+    : { elevation: 3 };
+
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: FtColors.background },
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40 },
-  hero: { marginBottom: 22 },
+  scroll: { flex: 1, backgroundColor: Comensal.background },
+  content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 40 },
+  hero: { marginBottom: 20 },
   heroEyebrow: {
     fontSize: 11,
-    letterSpacing: 2.5,
+    letterSpacing: 3.5,
     textTransform: 'uppercase',
-    color: FtColors.accentMuted,
-    marginBottom: 6,
+    color: Comensal.accentMuted,
+    marginBottom: 8,
   },
   heroTitle: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: FtColors.text,
-    letterSpacing: 1,
+    fontSize: 34,
+    fontWeight: '700',
+    color: Comensal.text,
+    letterSpacing: 0.8,
   },
   heroSub: {
-    marginTop: 8,
+    marginTop: 10,
     fontSize: 14,
-    lineHeight: 20,
-    color: FtColors.textMuted,
-    maxWidth: 300,
+    lineHeight: 22,
+    color: Comensal.textMuted,
+    maxWidth: 320,
   },
   loader: { marginVertical: 20 },
-  err: { color: FtColors.danger, marginBottom: 12, fontSize: 14 },
-  empty: { fontSize: 14, color: FtColors.textMuted, marginBottom: 16 },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 22 },
+  err: { color: Comensal.danger, marginBottom: 12, fontSize: 14 },
+  empty: { fontSize: 14, color: Comensal.textMuted, marginBottom: 16 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 22 },
   chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 999,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: Comensal.radiusSm,
     borderWidth: 1,
-    borderColor: FtColors.borderSubtle,
-    backgroundColor: 'transparent',
+    borderColor: Comensal.border,
+    backgroundColor: Comensal.surfaceInput,
   },
   chipOn: {
-    borderColor: FtColors.accent,
-    backgroundColor: 'rgba(198, 168, 92, 0.08)',
+    borderColor: Comensal.accent,
+    backgroundColor: Comensal.chipSelectedBg,
   },
-  chipText: { fontSize: 12, color: FtColors.textMuted, letterSpacing: 0.2 },
-  chipTextOn: { color: FtColors.accent, fontWeight: '600' },
+  chipText: { fontSize: 12, color: Comensal.textMuted, letterSpacing: 0.2, fontWeight: '600' },
+  chipTextOn: { color: Comensal.text, fontWeight: '700' },
   card: {
     flexDirection: 'row',
-    marginBottom: 12,
-    borderRadius: 14,
+    marginBottom: 16,
+    borderRadius: Comensal.radiusMd,
     overflow: 'hidden',
-    backgroundColor: FtColors.surfaceElevated,
+    backgroundColor: Comensal.surfaceElevated,
     borderWidth: 1,
-    borderColor: FtColors.borderSubtle,
+    borderColor: Comensal.border,
+    ...mesaCardShadow,
   },
   cardAccent: {
-    width: 3,
-    backgroundColor: FtColors.accent,
-    opacity: 0.65,
+    width: 2,
+    backgroundColor: Comensal.accent,
+    opacity: 0.85,
   },
-  cardInner: { flex: 1, paddingVertical: 16, paddingHorizontal: 16 },
+  cardInner: { flex: 1, paddingVertical: 18, paddingHorizontal: 16 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  tableId: { fontSize: 20, fontWeight: '500', color: FtColors.text, letterSpacing: 0.5 },
-  badge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 },
-  badgeOk: { backgroundColor: 'rgba(125, 206, 160, 0.12)' },
-  badgeBusy: { backgroundColor: 'rgba(224, 112, 110, 0.12)' },
-  badgeHold: { backgroundColor: 'rgba(216, 181, 106, 0.14)' },
-  badgeText: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8 },
-  badgeTxtOk: { color: FtColors.success },
-  badgeTxtBusy: { color: FtColors.danger },
-  badgeTxtHold: { color: FtColors.warning },
-  meta: { marginTop: 8, fontSize: 13, color: FtColors.textFaint },
-  resBox: {
-    marginTop: 14,
-    paddingTop: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: FtColors.border,
+  tableId: { fontSize: 21, fontWeight: '800', color: Comensal.text, letterSpacing: 0.3 },
+  badge: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: Comensal.radiusSm },
+  badgeOk: { backgroundColor: Comensal.badgeOkBg },
+  badgeBusy: { backgroundColor: Comensal.badgeBusyBg },
+  badgeHold: { backgroundColor: Comensal.badgeHoldBg },
+  badgeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
+  badgeTxtOk: { color: Comensal.success },
+  badgeTxtBusy: { color: Comensal.danger },
+  badgeTxtHold: { color: Comensal.warning },
+  meta: { marginTop: 8, fontSize: 13, color: Comensal.textMuted },
+  bottomRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 12,
   },
-  resText: { fontSize: 14, color: FtColors.text, fontWeight: '400' },
-  cancelBtn: { marginTop: 10, alignSelf: 'flex-start' },
-  cancelBtnText: { fontSize: 13, color: FtColors.accent, fontWeight: '500' },
+  tableThumb: {
+    width: 92,
+    height: 92,
+    borderRadius: Comensal.radiusSm,
+    backgroundColor: Comensal.heroImgFallback,
+  },
+  sidePanel: {
+    flex: 1,
+    justifyContent: 'space-between',
+    minHeight: 86,
+  },
+  sideHint: {
+    fontSize: 13,
+    color: Comensal.textMuted,
+    lineHeight: 18,
+  },
+  resBox: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  resText: { fontSize: 14, color: Comensal.text, fontWeight: '500', lineHeight: 20 },
+  cancelBtn: { marginTop: 8, alignSelf: 'flex-start' },
+  cancelBtnText: { fontSize: 13, color: Comensal.accent, fontWeight: '500' },
   reserveBtn: {
-    marginTop: 16,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: FtColors.accent,
+    alignSelf: 'flex-end',
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: Comensal.radiusSm,
+    backgroundColor: Comensal.accent,
     alignItems: 'center',
   },
-  reserveBtnText: { color: FtColors.onAccent, fontSize: 14, fontWeight: '600', letterSpacing: 0.4 },
+  reserveBtnText: { color: Comensal.onAccent, fontSize: 14, fontWeight: '800', letterSpacing: 0.35 },
 });

@@ -6,10 +6,11 @@ export type MesaActiva = {
 };
 
 /** Comensal sentado: reserva completada con llegada y mesa ocupada (última sesión). */
-export async function fetchMesaActivaComensal(): Promise<MesaActiva | null> {
+export async function fetchMesaActivaComensal(userId: string): Promise<MesaActiva | null> {
   const { data, error } = await supabase
     .from('reservas_mesa')
     .select('id_mesa, mesas ( id, codigo )')
+    .eq('id_usuario', userId)
     .eq('ciclo', 'completada')
     .eq('comensal_llego', true)
     .order('creado_en', { ascending: false })

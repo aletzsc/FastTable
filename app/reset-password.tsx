@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
-import { FtColors } from '@/constants/fasttable';
+import { Comensal } from '@/constants/theme-comensal';
 import { formatAuthErrorMessage } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
@@ -73,7 +73,7 @@ export default function ResetPasswordScreen() {
                   value={password}
                   onChangeText={setPassword}
                   placeholder="Mínimo 8 caracteres"
-                  placeholderTextColor={FtColors.textMuted}
+                  placeholderTextColor={Comensal.textMuted}
                   secureTextEntry
                   style={styles.input}
                 />
@@ -85,7 +85,7 @@ export default function ResetPasswordScreen() {
                   value={confirm}
                   onChangeText={setConfirm}
                   placeholder="Repite la contraseña"
-                  placeholderTextColor={FtColors.textMuted}
+                  placeholderTextColor={Comensal.textMuted}
                   secureTextEntry
                   style={styles.input}
                 />
@@ -114,33 +114,33 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: FtColors.background },
+  safe: { flex: 1, backgroundColor: Comensal.background },
   flex: { flex: 1 },
-  scroll: { padding: 24, paddingBottom: 40 },
-  lead: { fontSize: 14, lineHeight: 20, color: FtColors.textMuted, marginBottom: 20 },
+  scroll: { padding: 24, paddingTop: 28, paddingBottom: 44 },
+  lead: { fontSize: 15, lineHeight: 24, color: Comensal.textMuted, marginBottom: 22 },
   field: { marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: FtColors.text, marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: '700', color: Comensal.text, marginBottom: 8, letterSpacing: 0.2 },
   input: {
     borderWidth: 1,
-    borderColor: FtColors.border,
-    borderRadius: 10,
+    borderColor: Comensal.border,
+    borderRadius: Comensal.radiusMd,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: FtColors.text,
-    backgroundColor: FtColors.surface,
+    color: Comensal.text,
+    backgroundColor: Comensal.surfaceInput,
   },
   primaryBtn: {
-    marginTop: 8,
-    backgroundColor: FtColors.accent,
-    paddingVertical: 14,
-    borderRadius: 10,
+    marginTop: 12,
+    backgroundColor: Comensal.accent,
+    paddingVertical: 15,
+    borderRadius: Comensal.radiusMd,
     alignItems: 'center',
   },
   primaryBtnDisabled: { opacity: 0.7 },
-  primaryBtnText: { color: FtColors.onAccent, fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: Comensal.onAccent, fontSize: 16, fontWeight: '800', letterSpacing: 0.2 },
   link: { marginTop: 18, alignItems: 'center' },
-  linkText: { fontSize: 15, color: FtColors.accent },
+  linkText: { fontSize: 15, color: Comensal.accent },
   backLink: { marginTop: 12, alignItems: 'center' },
-  backLinkText: { fontSize: 15, color: FtColors.textMuted },
+  backLinkText: { fontSize: 15, color: Comensal.textMuted },
 });
