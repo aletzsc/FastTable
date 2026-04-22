@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 
 import { Comensal } from '@/constants/theme-comensal';
 import { formatAuthErrorMessage } from '@/lib/auth-errors';
+import { getRememberedEmail, setRememberedEmail } from '@/lib/remembered-email';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
@@ -22,6 +23,17 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const remembered = await getRememberedEmail();
+      if (active && remembered) setEmail(remembered);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const onSubmit = async () => {
     const e = email.trim().toLowerCase();
@@ -36,6 +48,7 @@ export default function LoginScreen() {
         Alert.alert('No se pudo iniciar sesión', formatAuthErrorMessage(error.message));
         return;
       }
+      await setRememberedEmail(e);
       router.replace('/');
     } finally {
       setBusy(false);
@@ -87,7 +100,7 @@ export default function LoginScreen() {
             <Text style={styles.secondaryLinkText}>¿Olvidaste tu contraseña?</Text>
           </Pressable>
 
-          <Pressable onPress={() => router.back()} style={styles.backLink}>
+          <Pressable onPress={() => router.replace('/')} style={styles.backLink}>
             <Text style={styles.backLinkText}>Volver</Text>
           </Pressable>
         </ScrollView>

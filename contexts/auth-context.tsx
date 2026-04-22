@@ -44,17 +44,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadStaff = useCallback(async (userId: string) => {
-    const { data, error } = await supabase
-      .from('personal')
-      .select('*')
-      .eq('id_usuario', userId)
-      .eq('activo', true)
-      .maybeSingle();
-    if (error) {
-      setStaffMember(null);
-      return;
+    let lastError: string | null = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const { data, error } = await supabase
+        .from('personal')
+        .select('*')
+        .eq('id_usuario', userId)
+        .eq('activo', true)
+        .maybeSingle();
+      if (!error) {
+        setStaffMember(data);
+        return;
+      }
+      lastError = error.message;
+      // Retry transient errors to avoid misrouting staff into comensal flow.
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
     }
-    setStaffMember(data);
+    console.warn('No se pudo cargar personal activo:', lastError);
+    setStaffMember(null);
   }, []);
 
   useEffect(() => {

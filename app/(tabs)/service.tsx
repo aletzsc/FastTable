@@ -1,40 +1,59 @@
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
+import { ComensalGreetingLine } from '@/components/comensal-greeting-line';
 import { useAuth } from '@/contexts/auth-context';
 import { Comensal } from '@/constants/theme-comensal';
+import { fetchMesaActivaComensal, type MesaActiva } from '@/lib/mesa-activa';
 import { supabase } from '@/lib/supabase';
 
 export default function ServiceScreen() {
   const { user } = useAuth();
-  const [tableCode, setTableCode] = useState('');
+  const [mesaActiva, setMesaActiva] = useState<MesaActiva | null>(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const loadMesa = useCallback(async () => {
+    if (!user?.id) {
+      setMesaActiva(null);
+      return;
+    }
+    const mesa = await fetchMesaActivaComensal(user.id);
+    setMesaActiva(mesa);
+  }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setLoading(true);
+      loadMesa().finally(() => {
+        if (active) setLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }, [loadMesa]),
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadMesa();
+    setRefreshing(false);
+  }, [loadMesa]);
 
   const onCallWaiter = async () => {
     if (!user?.id) return;
-    const code = tableCode.trim();
-    if (!code) {
-      Alert.alert('Mesa', 'Indica el código de la mesa (ej. M1).');
+    if (!mesaActiva?.id_mesa) {
+      Alert.alert('Mesa', 'No tienes una mesa activa para solicitar servicio.');
       return;
     }
     setBusy(true);
     try {
-      const { data: table, error: tErr } = await supabase
-        .from('mesas')
-        .select('id')
-        .eq('codigo', code)
-        .maybeSingle();
-      if (tErr) {
-        Alert.alert('Error', tErr.message);
-        return;
-      }
-      if (!table) {
-        Alert.alert('Mesa', `No existe una mesa con código "${code}".`);
-        return;
-      }
       const { error } = await supabase.from('solicitudes_servicio').insert({
-        id_mesa: table.id,
+        id_mesa: mesaActiva.id_mesa,
         id_usuario: user.id,
         mensaje: message.trim() || null,
         estado: 'abierta',
@@ -51,20 +70,30 @@ export default function ServiceScreen() {
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Comensal.accent}
+          colors={[Comensal.accent]}
+        />
+      }>
       <Text style={styles.eyebrow}>Asistencia</Text>
       <Text style={styles.intro}>Llama al personal cuando estés en mesa.</Text>
+      <ComensalGreetingLine style={styles.greetingLine} />
 
       <View style={styles.card}>
-        <Text style={styles.label}>Código de mesa</Text>
-        <TextInput
-          value={tableCode}
-          onChangeText={setTableCode}
-          placeholder="Ej. M1"
-          placeholderTextColor={Comensal.textMuted}
-          autoCapitalize="characters"
-          style={styles.input}
-        />
+        <Text style={styles.label}>Tu mesa actual</Text>
+        {loading ? (
+          <ActivityIndicator color={Comensal.accent} />
+        ) : mesaActiva ? (
+          <Text style={styles.fixedValue}>Mesa {mesaActiva.codigo}</Text>
+        ) : (
+          <Text style={styles.metaWarning}>No tienes mesa activa en este momento.</Text>
+        )}
       </View>
 
       <View style={styles.card}>
@@ -79,7 +108,10 @@ export default function ServiceScreen() {
         />
       </View>
 
-      <Pressable style={[styles.primaryBtn, busy && styles.btnDisabled]} onPress={onCallWaiter} disabled={busy}>
+      <Pressable
+        style={[styles.primaryBtn, (busy || !mesaActiva) && styles.btnDisabled]}
+        onPress={onCallWaiter}
+        disabled={busy || !mesaActiva}>
         <Text style={styles.primaryBtnText}>{busy ? 'Enviando…' : 'Llamar al mesero'}</Text>
       </Pressable>
     </ScrollView>
@@ -96,7 +128,8 @@ const styles = StyleSheet.create({
     color: Comensal.accentMuted,
     marginBottom: 8,
   },
-  intro: { fontSize: 15, color: Comensal.textMuted, marginBottom: 20, lineHeight: 22 },
+  intro: { fontSize: 15, color: Comensal.textMuted, marginBottom: 6, lineHeight: 22 },
+  greetingLine: { marginBottom: 14 },
   card: {
     padding: 18,
     borderRadius: Comensal.radiusMd,
@@ -106,6 +139,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   label: { fontSize: 13, fontWeight: '700', color: Comensal.text, marginBottom: 8 },
+  fixedValue: { fontSize: 20, color: Comensal.accent, fontWeight: '800' },
+  metaWarning: { fontSize: 14, color: Comensal.warning, lineHeight: 20 },
   input: {
     borderWidth: 1,
     borderColor: Comensal.border,

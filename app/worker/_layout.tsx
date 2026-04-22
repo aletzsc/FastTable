@@ -14,7 +14,6 @@ export default function WorkerLayout() {
         headerShadowVisible: false,
         contentStyle: { backgroundColor: FtColors.background },
       }}>
-      <Stack.Screen name="login" options={{ title: 'Acceso trabajador' }} />
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="reservations" options={{ title: 'Reservas y mesas' }} />
       <Stack.Screen name="kitchen" options={{ title: 'Cocina', headerShown: false }} />

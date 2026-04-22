@@ -145,7 +145,7 @@ export default function RegisterScreen() {
             <Text style={styles.secondaryLinkText}>¿Olvidaste tu contraseña?</Text>
           </Pressable>
 
-          <Pressable onPress={() => router.back()} style={styles.backLink}>
+          <Pressable onPress={() => router.replace('/')} style={styles.backLink}>
             <Text style={styles.backLinkText}>Volver</Text>
           </Pressable>
         </ScrollView>

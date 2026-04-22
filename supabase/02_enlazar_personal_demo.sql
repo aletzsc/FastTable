@@ -1,12 +1,10 @@
 -- =============================================================================
 -- Enlazar public.personal a usuarios que YA existan en Authentication.
 -- Ejecutar DESPUÉS de 01_reconstruir_db.sql y de crear las cuentas demo.
--- Los correos deben coincidir con los que crea:
---   npm run demo:workers
--- (ver scripts/crear-cuentas-demo-trabajadores.mjs y DEMO_CUENTAS.txt)
+-- Los correos deben coincidir con 02_DEMO_CUENTAS.txt.
+-- (ver 02_DEMO_CUENTAS.txt)
 --
 -- Roles: anfitrión, mesero, gerente, cocina (public.rol_personal).
--- Si ya ejecutaste demo:workers, NO necesitas este SQL (el script ya inserta personal).
 -- =============================================================================
 
 INSERT INTO public.personal (id_usuario, nombre_visible, rol, activo)

@@ -21,15 +21,15 @@ Backend: Supabase (PostgreSQL, Auth, Row Level Security, Realtime, RPC).
 ------------------------------------------
   app/(tabs)/          → Comensal: index (mesas), menu, queue, etc.
   app/worker/          → Personal: index (panel sala), kitchen, gerente,
-                         reservations, login.
+                         reservations.
   app/                 → login, register, forgot-password, reset-password
   components/          → reservation-modal, deep-link-bridge (enlaces auth)
   contexts/            → auth-context (sesión, perfil, personal)
   hooks/               → use-auth-deep-link, use-supabase-realtime-refresh
   lib/                 → supabase, mesa-activa, cuenta-comensal, auth-errors,
                          cocina-errors, worker-reservations-logic, format…
-  scripts/             → crear-cuentas-demo-trabajadores.mjs, ft-staff-console.mjs
-  supabase/            → SQL maestro, parches incrementales, guías .txt
+  scripts/             → ft-staff-console.mjs
+  supabase/            → SQL maestro + guías .txt
 
 
 3. BASE DE DATOS Y SQL
@@ -38,23 +38,13 @@ Archivo maestro (instalación desde cero):
   • supabase/01_reconstruir_db.sql
     — Esquema, RLS, triggers, RPC, seed demo, publicación Realtime al final.
 
-Parches (bases ya existentes; ejecutar en SQL Editor según necesidad):
-  • patch_mesero_ui.sql          — Mesero: RPC atender reserva completa,
-                                    marcar mesa libre/ocupada, políticas.
-  • patch_cocina_pedidos.sql     — Cocina: pedidos_cocina, RPC cocina, etc.
-  • patch_gerente_stats_y_mesa_hero.sql
-    — Columnas mesas (descripcion_publica, imagen_url) + RPC gerente_dashboard_stats().
-  • patch_realtime_publication.sql
-    — Añade tablas a supabase_realtime para actualización en vivo en la app.
-
 Guías:
-  • supabase/EJECUCION.txt       — Orden recomendado de scripts.
-  • supabase/GUIA_ALTERAR_DB.txt — Cómo alterar la BD con cuidado.
-  • supabase/DEMO_CUENTAS.txt    — Cuentas demo de trabajadores + npm run demo:workers
+  • supabase/00_EJECUCION.txt       — Orden recomendado de scripts.
+  • supabase/01_GUIA_ALTERAR_DB.txt — Cómo alterar la BD con cuidado.
+  • supabase/02_DEMO_CUENTAS.txt    — Cuentas demo de trabajadores (alta manual)
 
-Si el proyecto Supabase ya existía antes de ciertos cambios, conviene haber
-ejecutado los parches que falten; si reconstruyes solo con 01_reconstruir_db.sql
-reciente, muchos parches ya van integrados al final del script.
+La instalación y la lógica actual están consolidadas en `01_reconstruir_db.sql`
+para reconstrucción limpia desde cero.
 
 
 4. FUNCIONALIDADES IMPLEMENTADAS (AVANCE)
@@ -85,15 +75,13 @@ Autenticación y errores
     navega a /reset-password.
 
 Herramientas locales (no van en la app publicada)
-  • npm run demo:workers — Crea usuarios Auth + personal demo (requiere
-    SUPABASE_SERVICE_ROLE_KEY en .env).
   • npm run staff:console — Consola interactiva (Node) para listar/alta/baja
     de fichas de personal.
 
 Tiempo real (sin depender solo del pull-to-refresh)
   • hooks/use-supabase-realtime-refresh.ts suscribe a postgres_changes en las
     tablas indicadas mientras la pantalla tiene foco (debounce ~400 ms).
-  • Requiere tablas en publicación supabase_realtime (01 o patch_realtime_publication).
+  • Requiere tablas en publicación supabase_realtime (incluido en 01).
   • Pantallas cableadas: worker index, kitchen, gerente, reservations; comensal
     index (mesas), menu, queue.
 
@@ -132,7 +120,6 @@ hacer `git status` y `git pull` al volver.
 -------------------
   npm install
   npm start                    → Expo dev server
-  npm run demo:workers         → Cuentas demo trabajadores (con service role)
   npm run staff:console        → Consola local personal
 
 

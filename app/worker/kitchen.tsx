@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/contexts/auth-context';
 import { FtColors } from '@/constants/fasttable';
@@ -71,6 +72,8 @@ export default function KitchenScreen() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toggleBusy, setToggleBusy] = useState<string | null>(null);
   const [controlOpen, setControlOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>('todas');
+  const prevPendingCount = useRef(0);
 
   const load = useCallback(async () => {
     const [pRes, iRes] = await Promise.all([
@@ -113,6 +116,30 @@ export default function KitchenScreen() {
     load,
     !!session && !!staffMember && (staffMember.rol === 'cocina' || staffMember.rol === 'gerente'),
   );
+
+  useEffect(() => {
+    if (pedidos.length > prevPendingCount.current) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    prevPendingCount.current = pedidos.length;
+  }, [pedidos.length]);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const it of items) {
+      const c = catNombre(it.categorias_menu);
+      if (c) set.add(c);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [items]);
+
+  const filteredPedidos = useMemo(() => {
+    if (categoryFilter === 'todas') return pedidos;
+    const allowed = new Set(
+      items.filter((it) => catNombre(it.categorias_menu) === categoryFilter).map((it) => it.nombre),
+    );
+    return pedidos.filter((p) => allowed.has(itemNombre(p.items_menu)));
+  }, [pedidos, items, categoryFilter]);
 
   const onListo = async (id: string) => {
     setBusyId(id);
@@ -158,7 +185,7 @@ export default function KitchenScreen() {
   }
 
   if (!staffMember) {
-    return <Redirect href="/worker/login" />;
+    return <Redirect href="/login" />;
   }
 
   if (staffMember.rol !== 'cocina' && staffMember.rol !== 'gerente') {
@@ -176,7 +203,7 @@ export default function KitchenScreen() {
         <View style={styles.hero}>
           <Pressable style={styles.backRow} onPress={() => router.back()} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color={FtColors.accent} />
-            <Text style={styles.backText}>Panel mesero</Text>
+            <Text style={styles.backText}>Panel personal</Text>
           </Pressable>
           <Text style={styles.heroEyebrow}>Cocina</Text>
           <Text style={styles.heroTitle}>{staffMember.nombre_visible}</Text>
@@ -189,20 +216,66 @@ export default function KitchenScreen() {
 
         {loading && !refreshing ? <ActivityIndicator color={FtColors.accent} style={styles.loader} /> : null}
 
+        <View style={styles.kpiRow}>
+          <View style={[styles.kpiCard, cardShadow]}>
+            <Text style={styles.kpiValue}>{pedidos.length}</Text>
+            <Text style={styles.kpiLabel}>Pendientes</Text>
+          </View>
+          <View style={[styles.kpiCard, cardShadow]}>
+            <Text style={styles.kpiValue}>{items.filter((it) => !it.disponible).length}</Text>
+            <Text style={styles.kpiLabel}>No disponibles</Text>
+          </View>
+        </View>
+
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Ionicons name="flame-outline" size={20} color={FtColors.warning} />
             <Text style={styles.h1}>Por preparar</Text>
           </View>
-          {pedidos.length === 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+            <Pressable
+              style={[styles.filterChip, categoryFilter === 'todas' && styles.filterChipOn]}
+              onPress={() => setCategoryFilter('todas')}>
+              <Text style={[styles.filterChipText, categoryFilter === 'todas' && styles.filterChipTextOn]}>
+                Todas
+              </Text>
+            </Pressable>
+            {categories.map((cat) => (
+              <Pressable
+                key={cat}
+                style={[styles.filterChip, categoryFilter === cat && styles.filterChipOn]}
+                onPress={() => setCategoryFilter(cat)}>
+                <Text style={[styles.filterChipText, categoryFilter === cat && styles.filterChipTextOn]}>
+                  {cat}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          {filteredPedidos.length === 0 ? (
             <Text style={styles.empty}>No hay pedidos pendientes.</Text>
           ) : (
-            pedidos.map((p) => (
+            filteredPedidos.map((p) => (
               <View key={p.id} style={[styles.pedidoCard, cardShadow]}>
                 <Text style={styles.pedidoMesa}>Mesa {mesaCodigo(p.mesas)}</Text>
                 <Text style={styles.pedidoPlato}>
                   {p.cantidad}× {itemNombre(p.items_menu)}
                 </Text>
+                <View style={styles.slaRow}>
+                  <View
+                    style={[
+                      styles.slaDot,
+                      Date.now() - new Date(p.creado_en).getTime() > 20 * 60 * 1000
+                        ? styles.slaLate
+                        : Date.now() - new Date(p.creado_en).getTime() > 10 * 60 * 1000
+                          ? styles.slaWarn
+                          : styles.slaOk,
+                    ]}
+                  />
+                  <Text style={styles.slaText}>
+                    En cola hace{' '}
+                    {Math.max(1, Math.floor((Date.now() - new Date(p.creado_en).getTime()) / 60000))} min
+                  </Text>
+                </View>
                 {p.nota_cliente ? (
                   <View style={styles.notaBox}>
                     <Text style={styles.notaLabel}>Nota del comensal</Text>
@@ -282,6 +355,17 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 18, paddingBottom: 40 },
   loader: { marginVertical: 16 },
+  kpiRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  kpiCard: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: FtColors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: FtColors.border,
+  },
+  kpiValue: { fontSize: 24, fontWeight: '800', color: FtColors.text },
+  kpiLabel: { fontSize: 12, color: FtColors.textMuted, marginTop: 4, fontWeight: '700' },
   hero: { marginBottom: 18 },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },
   backText: { fontSize: 15, color: FtColors.accent, fontWeight: '600' },
@@ -303,6 +387,18 @@ const styles = StyleSheet.create({
   section: { marginBottom: 28 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   h1: { fontSize: 18, fontWeight: '800', color: FtColors.text },
+  filterRow: { gap: 8, marginBottom: 12 },
+  filterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: FtColors.border,
+    backgroundColor: FtColors.surface,
+  },
+  filterChipOn: { borderColor: FtColors.accent, backgroundColor: FtColors.surfaceElevated },
+  filterChipText: { fontSize: 12, color: FtColors.textMuted, fontWeight: '600' },
+  filterChipTextOn: { color: FtColors.accent, fontWeight: '700' },
   empty: { fontSize: 14, color: FtColors.textMuted },
   pedidoCard: {
     padding: 16,
@@ -314,6 +410,12 @@ const styles = StyleSheet.create({
   },
   pedidoMesa: { fontSize: 13, fontWeight: '700', color: FtColors.accentMuted, textTransform: 'uppercase', letterSpacing: 0.8 },
   pedidoPlato: { fontSize: 21, fontWeight: '800', color: FtColors.text, marginTop: 6 },
+  slaRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  slaDot: { width: 9, height: 9, borderRadius: 999 },
+  slaOk: { backgroundColor: FtColors.success },
+  slaWarn: { backgroundColor: FtColors.warning },
+  slaLate: { backgroundColor: FtColors.danger },
+  slaText: { fontSize: 12, color: FtColors.textMuted },
   notaBox: {
     marginTop: 12,
     padding: 12,

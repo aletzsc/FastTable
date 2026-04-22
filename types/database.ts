@@ -58,6 +58,7 @@ export type Database = {
         Row: {
           id: string;
           id_usuario: string | null;
+          nombre_cliente: string | null;
           personas_grupo: number;
           estado: 'esperando' | 'sentado' | 'cancelado';
           nota: string | null;
@@ -69,6 +70,7 @@ export type Database = {
         };
         Insert: {
           id_usuario?: string | null;
+          nombre_cliente?: string | null;
           personas_grupo: number;
           estado?: 'esperando' | 'sentado' | 'cancelado';
           nota?: string | null;
@@ -109,6 +111,31 @@ export type Database = {
           estado: 'pendiente' | 'listo';
           creado_en: string;
           listo_en: string | null;
+        };
+      };
+      reportes_problema: {
+        Row: {
+          id: string;
+          id_usuario: string;
+          nombre_usuario: string | null;
+          titulo: string;
+          descripcion: string;
+          estado: 'abierto' | 'revisado' | 'cerrado';
+          creado_en: string;
+          actualizado_en: string;
+        };
+        Insert: {
+          id_usuario: string;
+          nombre_usuario?: string | null;
+          titulo: string;
+          descripcion: string;
+          estado?: 'abierto' | 'revisado' | 'cerrado';
+        };
+        Update: {
+          nombre_usuario?: string | null;
+          titulo?: string;
+          descripcion?: string;
+          estado?: 'abierto' | 'revisado' | 'cerrado';
         };
       };
       solicitudes_servicio: {

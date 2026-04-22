@@ -20,7 +20,7 @@ export const REALTIME_KITCHEN = ['pedidos_cocina', 'items_menu'] as const;
 export const REALTIME_WORKER_RESERVATIONS = ['reservas_mesa', 'mesas'] as const;
 
 /** Panel gerente (stats agregados) */
-export const REALTIME_GERENTE = ['pedidos_cocina', 'items_menu', 'personal'] as const;
+export const REALTIME_GERENTE = ['pedidos_cocina', 'items_menu', 'personal', 'reportes_problema'] as const;
 
 /** Comensal — mesas en pestaña Salón (+ reservas propias) */
 export const REALTIME_TABLES_SCREEN = ['mesas', 'reservas_mesa'] as const;
@@ -34,7 +34,7 @@ export const REALTIME_MENU_COMENSAL = ['items_menu', 'pedidos_cocina'] as const;
 /**
  * Mientras la pantalla está enfocada, escucha cambios en Postgres (Supabase Realtime)
  * y vuelve a cargar datos sin pull-to-refresh. Requiere que las tablas estén en
- * `supabase_realtime` (ver `supabase/patch_realtime_publication.sql`).
+ * `supabase_realtime` (incluido en `supabase/01_reconstruir_db.sql`).
  */
 export function useSupabaseRealtimeRefresh(
   tableNames: readonly string[],

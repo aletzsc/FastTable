@@ -1,4 +1,3 @@
-import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -9,30 +8,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 
 import { useAuth } from '@/contexts/auth-context';
 import { Comensal } from '@/constants/theme-comensal';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { session, user, profile, loading, signOut } = useAuth();
-  const [signingOut, setSigningOut] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      setSigningOut(false);
-    }, []),
-  );
-
-  const onSignOut = async () => {
-    setSigningOut(true);
-    try {
-      await signOut();
-    } finally {
-      setSigningOut(false);
-    }
-  };
+  const { session, user, staffMember, loading } = useAuth();
 
   if (loading) {
     return (
@@ -43,8 +26,10 @@ export default function WelcomeScreen() {
     );
   }
 
-  const displayName = profile?.nombre_completo?.trim() || user?.email?.split('@')[0] || 'Invitado';
-  const email = user?.email ?? '';
+  if (session && user) {
+    if (staffMember) return <Redirect href="/worker" />;
+    return <Redirect href="/(tabs)" />;
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -54,41 +39,18 @@ export default function WelcomeScreen() {
         <View style={styles.brandRule} />
         <Text style={styles.tagline}>Reserva mesa, fila y servicio en un solo lugar.</Text>
 
-        {session && user ? (
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Sesión</Text>
-            <Text style={styles.cardName}>{displayName}</Text>
-            {email ? <Text style={styles.cardEmail}>{email}</Text> : null}
-            <Pressable style={styles.primaryBtn} onPress={() => router.push('/(tabs)')}>
-              <Text style={styles.primaryBtnText}>Entrar como comensal</Text>
-            </Pressable>
-            <Pressable style={styles.secondaryBtn} onPress={() => router.push('/worker/login')}>
-              <Text style={styles.secondaryBtnText}>Iniciar sesión como trabajador</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.ghostBtn, signingOut && styles.ghostDisabled]}
-              onPress={onSignOut}
-              disabled={signingOut}>
-              <Text style={styles.ghostBtnText}>{signingOut ? 'Cerrando…' : 'Cerrar sesión'}</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Cuenta</Text>
-            <Text style={styles.cardBody}>
-              Crea una cuenta con correo y contraseña, o entra si ya te registraste.
-            </Text>
-            <Pressable style={styles.primaryBtn} onPress={() => router.push('/register')}>
-              <Text style={styles.primaryBtnText}>Registrarme</Text>
-            </Pressable>
-            <Pressable style={styles.secondaryBtn} onPress={() => router.push('/login')}>
-              <Text style={styles.secondaryBtnText}>Ya tengo cuenta</Text>
-            </Pressable>
-            <Pressable style={styles.secondaryBtn} onPress={() => router.push('/worker/login')}>
-              <Text style={styles.secondaryBtnText}>Soy trabajador</Text>
-            </Pressable>
-          </View>
-        )}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Cuenta</Text>
+          <Text style={styles.cardBody}>
+            Crea una cuenta con correo y contraseña, o entra si ya te registraste.
+          </Text>
+          <Pressable style={styles.primaryBtn} onPress={() => router.push('/register')}>
+            <Text style={styles.primaryBtnText}>Registrarme</Text>
+          </Pressable>
+          <Pressable style={styles.secondaryBtn} onPress={() => router.push('/login')}>
+            <Text style={styles.secondaryBtnText}>Iniciar sesión</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -136,6 +98,14 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   tagline: { marginTop: 18, fontSize: 16, lineHeight: 25, color: Comensal.textMuted, maxWidth: 320 },
+  greetingLine: {
+    marginTop: 16,
+    fontSize: 15,
+    lineHeight: 22,
+    color: Comensal.textMuted,
+    fontWeight: '500',
+    maxWidth: 320,
+  },
   card: {
     marginTop: 36,
     padding: 24,

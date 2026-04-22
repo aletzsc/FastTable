@@ -71,6 +71,15 @@ export default function WorkerReservationsScreen() {
     () => splitReservationsByTime(reservas, new Date()),
     [reservas],
   );
+  const now = new Date();
+  const attendOrdered = useMemo(
+    () =>
+      [...attend].sort(
+        (a, b) =>
+          new Date(a.fecha_hora_reserva).getTime() - new Date(b.fecha_hora_reserva).getTime(),
+      ),
+    [attend],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -95,7 +104,7 @@ export default function WorkerReservationsScreen() {
   useSupabaseRealtimeRefresh(
     REALTIME_WORKER_RESERVATIONS,
     load,
-    !!session && !!staffMember && (staffMember.rol === 'mesero' || staffMember.rol === 'anfitrion'),
+    !!session && !!staffMember && (staffMember.rol === 'anfitrion' || staffMember.rol === 'gerente'),
   );
 
   const resolve = async (id: string, arrived: boolean) => {
@@ -128,7 +137,11 @@ export default function WorkerReservationsScreen() {
   }
 
   if (!session || !staffMember) {
-    return <Redirect href="/worker/login" />;
+    return <Redirect href="/login" />;
+  }
+
+  if (staffMember.rol === 'mesero') {
+    return <Redirect href="/worker" />;
   }
 
   return (
@@ -155,20 +168,24 @@ export default function WorkerReservationsScreen() {
         min).
       </Text>
 
-      {attend.length === 0 ? (
+      {attendOrdered.length === 0 ? (
         <Text style={styles.empty}>Nada pendiente en este momento.</Text>
       ) : (
-        attend.map((r) => {
+        attendOrdered.map((r) => {
           const t = r.mesas;
           const code = t?.codigo ?? '—';
           const guest = names[r.id_usuario]?.trim() || 'Cliente';
           const other = t?.id_personal_atendiendo != null && t.id_personal_atendiendo !== staffMember.id;
-          const showNoShow = canShowNoShow(r, new Date());
+          const showNoShow = canShowNoShow(r, now);
+          const isLate = new Date(r.fecha_hora_reserva).getTime() < now.getTime();
 
           return (
             <View key={r.id} style={styles.card}>
               <Text style={styles.cardTitle}>
                 Mesa {code} · {guest}
+              </Text>
+              <Text style={[styles.badge, isLate ? styles.badgeWarn : styles.badgeInfo]}>
+                {isLate ? 'Prioridad alta' : 'Próxima atención'}
               </Text>
               <Text style={styles.line}>Hora acordada: {fmt(r.fecha_hora_reserva)}</Text>
               <Text style={styles.line}>Personas: {r.personas_grupo}</Text>
@@ -177,18 +194,22 @@ export default function WorkerReservationsScreen() {
                 <Text style={styles.warn}>Otro mesero está atendiendo esta mesa.</Text>
               ) : (
                 <>
-                  <Pressable style={styles.btnOk} onPress={() => onAtenderCompleta(r.id)}>
-                    <Text style={styles.btnOkText}>Atender</Text>
-                  </Pressable>
-                  {showNoShow ? (
-                    <Pressable style={styles.btnNo} onPress={() => resolve(r.id, false)}>
+                  <View style={styles.quickActions}>
+                    <Pressable style={styles.btnOk} onPress={() => onAtenderCompleta(r.id)}>
+                      <Text style={styles.btnOkText}>Atender</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.btnNo, !showNoShow && styles.btnNoDisabled]}
+                      onPress={() => resolve(r.id, false)}
+                      disabled={!showNoShow}>
                       <Text style={styles.btnNoText}>Comensal no llegó</Text>
                     </Pressable>
-                  ) : (
+                  </View>
+                  {!showNoShow ? (
                     <Text style={styles.hintSmall}>
                       Tras 5 min desde la hora acordada podrás marcar “Comensal no llegó”.
                     </Text>
-                  )}
+                  ) : null}
                 </>
               )}
             </View>
@@ -247,10 +268,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardTitle: { fontSize: 16, fontWeight: '800', color: FtColors.text, marginBottom: 8 },
+  badge: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  badgeInfo: { color: FtColors.accent, backgroundColor: 'rgba(124,140,255,0.18)' },
+  badgeWarn: { color: FtColors.warning, backgroundColor: 'rgba(240,189,115,0.18)' },
   line: { fontSize: 14, color: FtColors.textMuted, marginBottom: 4 },
   warn: { fontSize: 13, color: FtColors.warning, marginTop: 8 },
+  quickActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   btnOk: {
-    marginTop: 12,
+    flex: 1,
     paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: FtColors.success,
@@ -258,7 +291,7 @@ const styles = StyleSheet.create({
   },
   btnOkText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   btnNo: {
-    marginTop: 10,
+    flex: 1,
     paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: FtColors.surface,
@@ -266,6 +299,7 @@ const styles = StyleSheet.create({
     borderColor: FtColors.border,
     alignItems: 'center',
   },
+  btnNoDisabled: { opacity: 0.45 },
   btnNoText: { color: FtColors.text, fontWeight: '700', fontSize: 14 },
   hintSmall: { fontSize: 11, color: FtColors.textMuted, marginTop: 10, lineHeight: 16 },
 });

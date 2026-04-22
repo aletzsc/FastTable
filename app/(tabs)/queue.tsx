@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
+import { ComensalGreetingLine } from '@/components/comensal-greeting-line';
 import { useAuth } from '@/contexts/auth-context';
 import { Comensal } from '@/constants/theme-comensal';
 import { REALTIME_QUEUE_TAB, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
@@ -26,9 +27,39 @@ export default function QueueScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [myEntryId, setMyEntryId] = useState<string | null>(null);
+  const [myStatus, setMyStatus] = useState<'esperando' | 'sentado' | 'cancelado' | null>(null);
+  const [assignedMesaCode, setAssignedMesaCode] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
+    const { data: mineRow, error: mineErr } = await supabase
+      .from('fila_espera')
+      .select('id, estado, id_mesa_asignada, mesas:id_mesa_asignada ( codigo, estado )')
+      .eq('id_usuario', user.id)
+      .order('unido_en', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (mineErr) {
+      Alert.alert('Fila', mineErr.message);
+      setMyStatus(null);
+      setAssignedMesaCode(null);
+    } else {
+      const mesaRaw = mineRow?.mesas as
+        | { codigo: string; estado: 'libre' | 'ocupada' | 'reservada' }
+        | { codigo: string; estado: 'libre' | 'ocupada' | 'reservada' }[]
+        | null
+        | undefined;
+      const mesa = Array.isArray(mesaRaw) ? mesaRaw[0] : mesaRaw;
+      const status = (mineRow?.estado as 'esperando' | 'sentado' | 'cancelado' | undefined) ?? null;
+      if (status === 'sentado' && mesa?.estado !== 'ocupada') {
+        setMyStatus(null);
+        setAssignedMesaCode(null);
+      } else {
+        setMyStatus(status);
+        setAssignedMesaCode(mesa?.codigo ?? null);
+      }
+    }
+
     const { data: waiting, error: wErr } = await supabase
       .from('fila_espera')
       .select('id, id_usuario, unido_en')
@@ -81,6 +112,18 @@ export default function QueueScreen() {
     }
     setBusy(true);
     try {
+      const { data: myProfile } = await supabase
+        .from('perfiles')
+        .select('nombre_completo')
+        .eq('id', user.id)
+        .maybeSingle();
+      const nombreCliente =
+        myProfile?.nombre_completo?.trim() ||
+        (typeof user.user_metadata?.nombre_completo === 'string' ? user.user_metadata.nombre_completo.trim() : '') ||
+        (typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '') ||
+        user.email?.split('@')[0] ||
+        null;
+
       const { data: existing } = await supabase
         .from('fila_espera')
         .select('id')
@@ -94,6 +137,7 @@ export default function QueueScreen() {
       }
       const { error } = await supabase.from('fila_espera').insert({
         id_usuario: user.id,
+        nombre_cliente: nombreCliente,
         personas_grupo: n,
         nota: note.trim() || null,
         estado: 'esperando',
@@ -142,6 +186,7 @@ export default function QueueScreen() {
       }>
       <Text style={styles.eyebrow}>Espera</Text>
       <Text style={styles.intro}>Entra en la fila o revisa tu posición.</Text>
+      <ComensalGreetingLine style={styles.greetingLine} />
 
       {loading && !refreshing ? <ActivityIndicator color={Comensal.accent} /> : null}
 
@@ -149,7 +194,11 @@ export default function QueueScreen() {
         <Text style={styles.label}>Tu posición</Text>
         <Text style={styles.big}>{position != null ? String(position) : '—'}</Text>
         <Text style={styles.meta}>
-          {myEntryId ? 'Estás en la fila.' : 'Aún no estás en la fila.'}
+          {myStatus === 'sentado'
+            ? `Ya te sentaron${assignedMesaCode ? ` en la mesa ${assignedMesaCode}` : ''}.`
+            : myEntryId
+              ? 'Estás en la fila.'
+              : 'Aún no estás en la fila.'}
         </Text>
       </View>
 
@@ -177,14 +226,18 @@ export default function QueueScreen() {
         />
       </View>
 
-      {!myEntryId ? (
+      {!myEntryId && myStatus !== 'sentado' ? (
         <Pressable style={[styles.primaryBtn, busy && styles.btnDisabled]} onPress={onJoin} disabled={busy}>
           <Text style={styles.primaryBtnText}>{busy ? '…' : 'Unirme a la fila'}</Text>
         </Pressable>
-      ) : (
+      ) : myEntryId ? (
         <Pressable style={[styles.secondaryBtn, busy && styles.btnDisabled]} onPress={onLeave} disabled={busy}>
           <Text style={styles.secondaryBtnText}>{busy ? '…' : 'Salir de la fila'}</Text>
         </Pressable>
+      ) : (
+        <View style={styles.card}>
+          <Text style={styles.meta}>Tu grupo ya fue asignado por recepción. Puedes ir al menú para pedir.</Text>
+        </View>
       )}
     </ScrollView>
   );
@@ -200,7 +253,8 @@ const styles = StyleSheet.create({
     color: Comensal.accentMuted,
     marginBottom: 8,
   },
-  intro: { fontSize: 15, color: Comensal.textMuted, marginBottom: 20, lineHeight: 22 },
+  intro: { fontSize: 15, color: Comensal.textMuted, marginBottom: 6, lineHeight: 22 },
+  greetingLine: { marginBottom: 14 },
   card: {
     padding: 18,
     borderRadius: Comensal.radiusMd,

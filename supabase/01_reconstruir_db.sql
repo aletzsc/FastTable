@@ -4,7 +4,7 @@
 -- 1) Copia TODO este archivo y pégalo de una vez en el editor.
 -- 2) Ejecuta con RUN (no Explain). Una sola selección que incluya BEGIN…COMMIT.
 -- 3) Requiere Auth (auth.users). Cuerpos plpgsql: $function$ … $function$.
--- Orden con otros archivos: ver supabase/EJECUCION.txt
+-- Orden con otros archivos: ver supabase/00_EJECUCION.txt
 -- RLS: ejecútalo con RLS activado en tablas; el SQL Editor de Supabase usa rol con permisos de admin.
 -- =============================================================================
 
@@ -69,6 +69,7 @@ CREATE INDEX idx_mesas_personal_atendiendo ON public.mesas (id_personal_atendien
 CREATE TABLE public.fila_espera (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   id_usuario UUID REFERENCES auth.users (id) ON DELETE SET NULL,
+  nombre_cliente TEXT,
   personas_grupo INT NOT NULL CHECK (personas_grupo > 0),
   estado public.estado_fila NOT NULL DEFAULT 'esperando',
   nota TEXT,
@@ -161,6 +162,20 @@ CREATE TABLE public.pedidos_cocina (
 
 CREATE INDEX idx_pedidos_cocina_estado ON public.pedidos_cocina (estado, creado_en);
 CREATE INDEX idx_pedidos_cocina_mesa ON public.pedidos_cocina (id_mesa);
+
+CREATE TABLE public.reportes_problema (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id_usuario UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  nombre_usuario TEXT,
+  titulo TEXT NOT NULL,
+  descripcion TEXT NOT NULL,
+  estado TEXT NOT NULL DEFAULT 'abierto' CHECK (estado IN ('abierto', 'revisado', 'cerrado')),
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_reportes_estado_fecha ON public.reportes_problema (estado, creado_en DESC);
+CREATE INDEX idx_reportes_usuario ON public.reportes_problema (id_usuario);
 
 CREATE UNIQUE INDEX un_reserva_activa_por_usuario
   ON public.reservas_mesa (id_usuario)
@@ -310,6 +325,7 @@ ALTER TABLE public.solicitudes_servicio ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.eventos_auditoria ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reservas_mesa ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pedidos_cocina ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reportes_problema ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY perfiles_select_propios ON public.perfiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY perfiles_update_propios ON public.perfiles FOR UPDATE USING (auth.uid() = id);
@@ -362,6 +378,25 @@ CREATE POLICY pedidos_cocina_select ON public.pedidos_cocina FOR SELECT TO authe
   USING (id_usuario = auth.uid() OR public.es_cocina_o_gerente());
 CREATE POLICY pedidos_cocina_insert_rpc_only ON public.pedidos_cocina FOR INSERT TO authenticated
   WITH CHECK (false);
+
+CREATE POLICY reportes_problema_select_propios ON public.reportes_problema FOR SELECT TO authenticated
+  USING (id_usuario = auth.uid());
+CREATE POLICY reportes_problema_insert_propios ON public.reportes_problema FOR INSERT TO authenticated
+  WITH CHECK (id_usuario = auth.uid());
+CREATE POLICY reportes_problema_select_gerente ON public.reportes_problema FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.personal p
+      WHERE p.id_usuario = auth.uid() AND p.activo = true AND p.rol = 'gerente'::public.rol_personal
+    )
+  );
+CREATE POLICY reportes_problema_update_gerente ON public.reportes_problema FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.personal p
+      WHERE p.id_usuario = auth.uid() AND p.activo = true AND p.rol = 'gerente'::public.rol_personal
+    )
+  );
 
 CREATE OR REPLACE FUNCTION public.crear_reserva_mesa(
   p_id_mesa uuid,
@@ -442,8 +477,17 @@ SET search_path = public
 AS $function$
 DECLARE
   id_mesa_accion uuid;
+  v_staff_rol public.rol_personal;
 BEGIN
   IF NOT public.es_personal_activo() THEN RAISE EXCEPTION 'solo_personal'; END IF;
+  SELECT p.rol INTO v_staff_rol
+  FROM public.personal AS p
+  WHERE p.id_usuario = auth.uid() AND p.activo = true
+  LIMIT 1;
+  IF v_staff_rol IS DISTINCT FROM 'anfitrion'::public.rol_personal
+     AND v_staff_rol IS DISTINCT FROM 'gerente'::public.rol_personal THEN
+    RAISE EXCEPTION 'solo_anfitrion_gerente';
+  END IF;
 
   PERFORM 1 FROM public.reservas_mesa WHERE id = p_id_reserva FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_encontrada'; END IF;
@@ -477,13 +521,18 @@ SET search_path = public
 AS $function$
 DECLARE
   v_staff_id uuid;
+  v_staff_rol public.rol_personal;
   v_mesa uuid;
   v_asignado uuid;
 BEGIN
   IF NOT public.es_personal_activo() THEN RAISE EXCEPTION 'solo_personal'; END IF;
 
-  SELECT p.id INTO v_staff_id FROM public.personal AS p WHERE p.id_usuario = auth.uid() AND p.activo = true LIMIT 1;
+  SELECT p.id, p.rol INTO v_staff_id, v_staff_rol FROM public.personal AS p WHERE p.id_usuario = auth.uid() AND p.activo = true LIMIT 1;
   IF v_staff_id IS NULL THEN RAISE EXCEPTION 'sin_personal'; END IF;
+  IF v_staff_rol IS DISTINCT FROM 'anfitrion'::public.rol_personal
+     AND v_staff_rol IS DISTINCT FROM 'gerente'::public.rol_personal THEN
+    RAISE EXCEPTION 'solo_anfitrion_gerente';
+  END IF;
 
   PERFORM 1 FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_encontrada'; END IF;
@@ -570,6 +619,12 @@ BEGIN
   UPDATE public.mesas AS t
   SET estado = 'libre', actualizado_en = now()
   WHERE t.id = p_id_mesa;
+
+  UPDATE public.fila_espera AS f
+  SET estado = 'cancelado',
+      cancelado_en = now()
+  WHERE f.id_mesa_asignada = p_id_mesa
+    AND f.estado = 'sentado';
 END;
 $function$;
 
@@ -581,13 +636,18 @@ SET search_path = public
 AS $function$
 DECLARE
   v_staff_id uuid;
+  v_staff_rol public.rol_personal;
   v_mesa uuid;
   v_asignado uuid;
 BEGIN
   IF NOT public.es_personal_activo() THEN RAISE EXCEPTION 'solo_personal'; END IF;
 
-  SELECT p.id INTO v_staff_id FROM public.personal AS p WHERE p.id_usuario = auth.uid() AND p.activo = true LIMIT 1;
+  SELECT p.id, p.rol INTO v_staff_id, v_staff_rol FROM public.personal AS p WHERE p.id_usuario = auth.uid() AND p.activo = true LIMIT 1;
   IF v_staff_id IS NULL THEN RAISE EXCEPTION 'sin_personal'; END IF;
+  IF v_staff_rol IS DISTINCT FROM 'anfitrion'::public.rol_personal
+     AND v_staff_rol IS DISTINCT FROM 'gerente'::public.rol_personal THEN
+    RAISE EXCEPTION 'solo_anfitrion_gerente';
+  END IF;
 
   PERFORM 1 FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_encontrada'; END IF;
@@ -620,6 +680,69 @@ BEGIN
 END;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.personal_atender_reserva_completa_asignando_mesero(
+  p_id_reserva uuid,
+  p_id_mesero uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  v_staff_id uuid;
+  v_staff_rol public.rol_personal;
+  v_mesa uuid;
+BEGIN
+  IF NOT public.es_personal_activo() THEN RAISE EXCEPTION 'solo_personal'; END IF;
+
+  SELECT p.id, p.rol INTO v_staff_id, v_staff_rol
+  FROM public.personal AS p
+  WHERE p.id_usuario = auth.uid() AND p.activo = true
+  LIMIT 1;
+  IF v_staff_id IS NULL THEN RAISE EXCEPTION 'sin_personal'; END IF;
+  IF v_staff_rol IS DISTINCT FROM 'anfitrion'::public.rol_personal
+     AND v_staff_rol IS DISTINCT FROM 'gerente'::public.rol_personal THEN
+    RAISE EXCEPTION 'solo_anfitrion_gerente';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.personal p
+    WHERE p.id = p_id_mesero
+      AND p.rol = 'mesero'::public.rol_personal
+      AND p.activo = true
+  ) THEN
+    RAISE EXCEPTION 'mesero_inactivo_o_inexistente';
+  END IF;
+
+  PERFORM 1 FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'no_encontrada'; END IF;
+
+  IF (SELECT rm.ciclo FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva) IS DISTINCT FROM 'activa' THEN
+    RAISE EXCEPTION 'no_activa';
+  END IF;
+  IF (SELECT rm.comensal_llego FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva) IS NOT NULL THEN
+    RAISE EXCEPTION 'ya_atendida';
+  END IF;
+
+  v_mesa := (SELECT rm.id_mesa FROM public.reservas_mesa AS rm WHERE rm.id = p_id_reserva);
+
+  IF (SELECT m.estado FROM public.mesas AS m WHERE m.id = v_mesa) IS DISTINCT FROM 'reservada' THEN
+    RAISE EXCEPTION 'mesa_no_reservada';
+  END IF;
+
+  UPDATE public.reservas_mesa
+  SET comensal_llego = true, ciclo = 'completada'
+  WHERE id = p_id_reserva;
+
+  UPDATE public.mesas AS t
+  SET estado = 'ocupada',
+      id_personal_atendiendo = p_id_mesero,
+      actualizado_en = now()
+  WHERE t.id = v_mesa;
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.personal_marcar_mesa_libre_ocupada(p_id_mesa uuid, p_ocupar boolean)
 RETURNS void
 LANGUAGE plpgsql
@@ -628,13 +751,18 @@ SET search_path = public
 AS $function$
 DECLARE
   v_staff_id uuid;
+  v_staff_rol public.rol_personal;
   v_estado public.estado_mesa;
   v_asignado uuid;
 BEGIN
   IF NOT public.es_personal_activo() THEN RAISE EXCEPTION 'solo_personal'; END IF;
 
-  SELECT p.id INTO v_staff_id FROM public.personal AS p WHERE p.id_usuario = auth.uid() AND p.activo = true LIMIT 1;
+  SELECT p.id, p.rol INTO v_staff_id, v_staff_rol FROM public.personal AS p WHERE p.id_usuario = auth.uid() AND p.activo = true LIMIT 1;
   IF v_staff_id IS NULL THEN RAISE EXCEPTION 'sin_personal'; END IF;
+  IF v_staff_rol IS DISTINCT FROM 'anfitrion'::public.rol_personal
+     AND v_staff_rol IS DISTINCT FROM 'gerente'::public.rol_personal THEN
+    RAISE EXCEPTION 'solo_anfitrion_gerente';
+  END IF;
 
   PERFORM 1 FROM public.mesas AS m WHERE m.id = p_id_mesa FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_encontrada'; END IF;
@@ -658,14 +786,108 @@ BEGIN
     IF v_estado IS DISTINCT FROM 'ocupada' THEN
       RAISE EXCEPTION 'solo_ocupada_a_libre_toggle';
     END IF;
-    IF v_asignado IS NOT NULL AND v_asignado IS DISTINCT FROM v_staff_id THEN
+    IF v_asignado IS NOT NULL
+       AND v_asignado IS DISTINCT FROM v_staff_id
+       AND v_staff_rol IS DISTINCT FROM 'anfitrion'::public.rol_personal
+       AND v_staff_rol IS DISTINCT FROM 'gerente'::public.rol_personal THEN
       RAISE EXCEPTION 'no_tu_mesa_toggle';
     END IF;
     UPDATE public.mesas AS t
     SET estado = 'libre',
         actualizado_en = now()
     WHERE t.id = p_id_mesa;
+
+    UPDATE public.fila_espera AS f
+    SET estado = 'cancelado',
+        cancelado_en = now()
+    WHERE f.id_mesa_asignada = p_id_mesa
+      AND f.estado = 'sentado';
   END IF;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.personal_sentar_desde_fila(
+  p_id_fila uuid,
+  p_id_mesa uuid,
+  p_id_mesero uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  v_staff_actor uuid;
+  v_staff_actor_rol public.rol_personal;
+  v_estado_fila public.estado_fila;
+  v_estado_mesa public.estado_mesa;
+BEGIN
+  IF NOT public.es_personal_activo() THEN
+    RAISE EXCEPTION 'solo_personal';
+  END IF;
+
+  SELECT p.id, p.rol
+  INTO v_staff_actor, v_staff_actor_rol
+  FROM public.personal AS p
+  WHERE p.id_usuario = auth.uid() AND p.activo = true
+  LIMIT 1;
+
+  IF v_staff_actor IS NULL THEN
+    RAISE EXCEPTION 'sin_personal';
+  END IF;
+
+  IF v_staff_actor_rol IS DISTINCT FROM 'anfitrion'::public.rol_personal
+     AND v_staff_actor_rol IS DISTINCT FROM 'gerente'::public.rol_personal THEN
+    RAISE EXCEPTION 'solo_anfitrion_gerente';
+  END IF;
+
+  PERFORM 1 FROM public.fila_espera WHERE id = p_id_fila FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'fila_no_encontrada';
+  END IF;
+
+  SELECT f.estado INTO v_estado_fila
+  FROM public.fila_espera AS f
+  WHERE f.id = p_id_fila;
+
+  IF v_estado_fila IS DISTINCT FROM 'esperando'::public.estado_fila THEN
+    RAISE EXCEPTION 'fila_no_esperando';
+  END IF;
+
+  PERFORM 1 FROM public.mesas WHERE id = p_id_mesa FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'mesa_no_encontrada';
+  END IF;
+
+  SELECT m.estado INTO v_estado_mesa
+  FROM public.mesas AS m
+  WHERE m.id = p_id_mesa;
+
+  IF v_estado_mesa IS DISTINCT FROM 'libre'::public.estado_mesa THEN
+    RAISE EXCEPTION 'mesa_no_libre';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.personal AS p
+    WHERE p.id = p_id_mesero
+      AND p.rol = 'mesero'::public.rol_personal
+      AND p.activo = true
+  ) THEN
+    RAISE EXCEPTION 'mesero_inactivo_o_inexistente';
+  END IF;
+
+  UPDATE public.mesas
+  SET estado = 'ocupada',
+      id_personal_atendiendo = p_id_mesero,
+      actualizado_en = now()
+  WHERE id = p_id_mesa;
+
+  UPDATE public.fila_espera
+  SET estado = 'sentado',
+      sentado_en = now(),
+      id_mesa_asignada = p_id_mesa
+  WHERE id = p_id_fila;
 END;
 $function$;
 
@@ -695,6 +917,18 @@ BEGIN
   LIMIT 1;
 
   IF v_mesa IS NULL THEN
+    SELECT f.id_mesa_asignada INTO v_mesa
+    FROM public.fila_espera f
+    INNER JOIN public.mesas m ON m.id = f.id_mesa_asignada
+    WHERE f.id_usuario = v_uid
+      AND f.estado = 'sentado'
+      AND f.id_mesa_asignada IS NOT NULL
+      AND m.estado = 'ocupada'
+    ORDER BY f.sentado_en DESC NULLS LAST, f.unido_en DESC
+    LIMIT 1;
+  END IF;
+
+  IF v_mesa IS NULL THEN
     RAISE EXCEPTION 'sin_mesa_para_pedidos';
   END IF;
 
@@ -714,6 +948,61 @@ BEGIN
   RETURNING id INTO v_id;
 
   RETURN v_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.comensal_terminar_servicio()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_mesa uuid;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'no_autenticado';
+  END IF;
+
+  SELECT rm.id_mesa INTO v_mesa
+  FROM public.reservas_mesa rm
+  INNER JOIN public.mesas m ON m.id = rm.id_mesa
+  WHERE rm.id_usuario = v_uid
+    AND rm.ciclo = 'completada'
+    AND rm.comensal_llego IS TRUE
+    AND m.estado = 'ocupada'
+  ORDER BY rm.creado_en DESC
+  LIMIT 1;
+
+  IF v_mesa IS NULL THEN
+    SELECT f.id_mesa_asignada INTO v_mesa
+    FROM public.fila_espera f
+    INNER JOIN public.mesas m ON m.id = f.id_mesa_asignada
+    WHERE f.id_usuario = v_uid
+      AND f.estado = 'sentado'
+      AND f.id_mesa_asignada IS NOT NULL
+      AND m.estado = 'ocupada'
+    ORDER BY f.sentado_en DESC NULLS LAST, f.unido_en DESC
+    LIMIT 1;
+  END IF;
+
+  IF v_mesa IS NULL THEN
+    RAISE EXCEPTION 'sin_mesa_activa_para_terminar';
+  END IF;
+
+  UPDATE public.mesas
+  SET estado = 'libre',
+      id_personal_atendiendo = NULL,
+      actualizado_en = now()
+  WHERE id = v_mesa;
+
+  UPDATE public.fila_espera
+  SET estado = 'cancelado',
+      cancelado_en = now()
+  WHERE id_usuario = v_uid
+    AND id_mesa_asignada = v_mesa
+    AND estado = 'sentado';
 END;
 $function$;
 
@@ -783,8 +1072,11 @@ GRANT EXECUTE ON FUNCTION public.personal_atender_reserva(uuid) TO authenticated
 GRANT EXECUTE ON FUNCTION public.personal_desasignar_mesa(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.personal_liberar_mesa_atendida(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.personal_atender_reserva_completa(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.personal_atender_reserva_completa_asignando_mesero(uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.personal_marcar_mesa_libre_ocupada(uuid, boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.personal_sentar_desde_fila(uuid, uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.crear_pedido_cocina(uuid, int, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.comensal_terminar_servicio() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.marcar_pedido_listo_cocina(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cocina_set_item_disponible(uuid, boolean) TO authenticated;
 
@@ -954,7 +1246,8 @@ DECLARE
     'reservas_mesa',
     'pedidos_cocina',
     'items_menu',
-    'personal'
+    'personal',
+    'reportes_problema'
   ];
 BEGIN
   FOREACH t IN ARRAY tables

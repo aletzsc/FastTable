@@ -13,6 +13,7 @@ import {
 import { useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 
+import { ComensalGreetingLine } from '@/components/comensal-greeting-line';
 import { ReservationModal } from '@/components/reservation-modal';
 import { useAuth } from '@/contexts/auth-context';
 import { Comensal } from '@/constants/theme-comensal';
@@ -193,6 +194,7 @@ export default function TablesScreen() {
     if (filter === 'todas') return rows;
     return rows.filter((t) => t.estado === filter);
   }, [rows, filter]);
+  const hasActiveReservation = mine.length > 0;
 
   return (
     <>
@@ -211,6 +213,7 @@ export default function TablesScreen() {
           <Text style={styles.heroEyebrow}>Salón</Text>
           <Text style={styles.heroTitle}>Mesas</Text>
           <Text style={styles.heroSub}>Elige una mesa libre y confirma día y hora.</Text>
+          <ComensalGreetingLine style={styles.heroGreeting} />
         </View>
 
         {loading && !refreshing ? (
@@ -290,14 +293,16 @@ export default function TablesScreen() {
                     ) : (
                       <Text style={styles.sideHint}>
                         {t.estado === 'libre'
-                          ? 'Disponible para reservar'
+                          ? hasActiveReservation
+                            ? 'Ya tienes una reserva activa'
+                            : 'Disponible para reservar'
                           : t.estado === 'ocupada'
                             ? 'Mesa ocupada en este momento'
                             : 'Mesa apartada temporalmente'}
                       </Text>
                     )}
 
-                    {t.estado === 'libre' && user && !myRes ? (
+                    {t.estado === 'libre' && user && !myRes && !hasActiveReservation ? (
                       <Pressable style={styles.reserveBtn} onPress={() => setReserveTable(t)}>
                         <Text style={styles.reserveBtnText}>Reservar</Text>
                       </Pressable>
@@ -358,6 +363,7 @@ const styles = StyleSheet.create({
     color: Comensal.textMuted,
     maxWidth: 320,
   },
+  heroGreeting: { marginTop: 10, marginBottom: 0 },
   loader: { marginVertical: 20 },
   err: { color: Comensal.danger, marginBottom: 12, fontSize: 14 },
   empty: { fontSize: 14, color: Comensal.textMuted, marginBottom: 16 },

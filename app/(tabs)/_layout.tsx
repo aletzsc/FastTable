@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Comensal } from '@/constants/theme-comensal';
 
 export default function GuestTabLayout() {
-  const { session, loading } = useAuth();
+  const { session, staffMember, loading } = useAuth();
 
   if (loading) {
     return (
@@ -18,6 +18,10 @@ export default function GuestTabLayout() {
 
   if (!session) {
     return <Redirect href="/" />;
+  }
+
+  if (staffMember) {
+    return <Redirect href="/worker" />;
   }
 
   return (
@@ -75,6 +79,14 @@ export default function GuestTabLayout() {
           title: 'Servicio',
           tabBarLabel: 'Servicio',
           tabBarIcon: ({ color, size }) => <Ionicons name="hand-left-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'Más',
+          tabBarLabel: 'Más',
+          tabBarIcon: ({ color, size }) => <Ionicons name="ellipsis-horizontal-circle-outline" color={color} size={size} />,
         }}
       />
     </Tabs>

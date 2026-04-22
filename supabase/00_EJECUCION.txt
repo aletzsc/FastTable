@@ -1,4 +1,4 @@
-FastTable — orden para reconstruir la base en Supabase (SQL Editor)
+FastTable — reconstrucción de base desde cero (SQL Editor)
 
 RLS (Row Level Security) en cada script
 ----------------------------------------
@@ -21,22 +21,13 @@ ahí sí te afectan las políticas; por eso los scripts de esquema se hacen desd
    Pegar TODO y ejecutar con RUN (no Explain). Transacción BEGIN…COMMIT.
 
 3) Cuentas de trabajadores en Authentication
-   npm run demo:workers
-   (o crea usuarios manualmente con los correos de DEMO_CUENTAS.txt)
+   Crea usuarios manualmente con los correos de 02_DEMO_CUENTAS.txt.
 
 4) 02_enlazar_personal_demo.sql
    Vincula los cuatro roles de personal (anfitrión, mesero, gerente, cocina) a esos usuarios.
-   Omitir si demo:workers ya insertó filas en public.personal.
-
-Si la base ya existía antes de abril 2026 y solo quieres las novedades del panel mesero
-(solicitudes filtradas por mesa asignada + RPC atender completa + toggle mesas):
-  → ejecuta también patch_mesero_ui.sql (una vez).
-
-Pedidos a cocina + disponibilidad de platos + pantalla cocinero:
-  → ejecuta patch_cocina_pedidos.sql (una vez, después de tener el resto del esquema FastTable).
 
 Actualización en vivo (Realtime) sin deslizar para refrescar:
-  → patch_realtime_publication.sql (una vez; en proyectos nuevos ya va al final de 01_reconstruir_db.sql).
+  → ya va integrada en 01_reconstruir_db.sql.
   → En Supabase → Project Settings → Realtime: asegúrate de que Realtime esté habilitado para el proyecto.
 
-Documentación operativa: GUIA_ALTERAR_DB.txt
+Documentación operativa: 01_GUIA_ALTERAR_DB.txt

@@ -15,6 +15,7 @@ import {
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
 
+import { ComensalGreetingLine } from '@/components/comensal-greeting-line';
 import { useAuth } from '@/contexts/auth-context';
 import { Comensal } from '@/constants/theme-comensal';
 import { REALTIME_MENU_COMENSAL, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
@@ -121,7 +122,7 @@ export default function MenuScreen() {
     if (!mesaActiva) {
       Alert.alert(
         'Mesa',
-        'Solo puedes pedir cuando tu reserva está atendida y estás en mesa (el mesero debe haber confirmado tu llegada).',
+        'Solo puedes pedir cuando ya estás sentado en mesa ocupada (por reserva atendida o por asignación desde fila).',
       );
       return;
     }
@@ -151,6 +152,25 @@ export default function MenuScreen() {
     }
   };
 
+  const terminarServicio = async () => {
+    Alert.alert('Terminar servicio', '¿Quieres cerrar tu servicio y liberar la mesa?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Terminar',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase.rpc('comensal_terminar_servicio');
+          if (error) {
+            Alert.alert('Servicio', mapCocinaRpcError(error.message));
+            return;
+          }
+          Alert.alert('Servicio finalizado', 'Tu mesa quedó liberada. ¡Gracias por visitarnos!');
+          await loadMesaYCuenta();
+        },
+      },
+    ]);
+  };
+
   return (
     <ScrollView
       style={styles.scroll}
@@ -164,7 +184,8 @@ export default function MenuScreen() {
         />
       }>
       <Text style={styles.eyebrow}>Carta</Text>
-      <Text style={styles.intro}>Toca un plato para pedir (solo con reserva en mesa).</Text>
+      <Text style={styles.intro}>Toca un plato para pedir cuando ya estés sentado en una mesa ocupada.</Text>
+      <ComensalGreetingLine style={styles.greetingLine} />
 
       {mesaActiva ? (
         <View style={styles.mesaBanner}>
@@ -177,7 +198,7 @@ export default function MenuScreen() {
         <View style={styles.warnBanner}>
           <Ionicons name="information-circle-outline" size={18} color={Comensal.warning} />
           <Text style={styles.warnBannerText}>
-            Sin mesa activa: necesitas reserva atendida y estar sentado para pedir platos.
+            Sin mesa activa: necesitas estar sentado en una mesa ocupada para pedir platos.
           </Text>
         </View>
       )}
@@ -206,6 +227,9 @@ export default function MenuScreen() {
           ) : (
             <Text style={styles.cuentaEmpty}>Aún no hay platos en tu cuenta.</Text>
           )}
+          <Pressable style={styles.finishBtn} onPress={terminarServicio}>
+            <Text style={styles.finishBtnText}>Terminar servicio y salir</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -306,7 +330,8 @@ const styles = StyleSheet.create({
     color: Comensal.accentMuted,
     marginBottom: 8,
   },
-  intro: { fontSize: 15, color: Comensal.textMuted, marginBottom: 18, lineHeight: 22 },
+  intro: { fontSize: 15, color: Comensal.textMuted, marginBottom: 6, lineHeight: 22 },
+  greetingLine: { marginBottom: 12 },
   mesaBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -369,6 +394,16 @@ const styles = StyleSheet.create({
   cuentaTotalLabel: { fontSize: 15, fontWeight: '700', color: Comensal.text },
   cuentaTotal: { fontSize: 18, fontWeight: '800', color: Comensal.accent },
   cuentaEmpty: { fontSize: 14, color: Comensal.textMuted, fontStyle: 'italic' },
+  finishBtn: {
+    marginTop: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Comensal.danger,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  finishBtnText: { color: Comensal.danger, fontSize: 14, fontWeight: '800' },
   loader: { marginVertical: 16 },
   err: { color: Comensal.danger, marginBottom: 12, fontSize: 14 },
   empty: { fontSize: 14, color: Comensal.textMuted },

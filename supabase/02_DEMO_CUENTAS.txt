@@ -4,16 +4,11 @@ FastTable — cuentas demo de trabajador (4 roles)
 
 No hay un solo "query" SQL que cree usuarios en Supabase alojado (tabla auth.users).
 
-Forma automática (recomendada)
---------------------------------
-1) En Supabase → Project Settings → API: copia la clave "service_role" (secreto).
-2) En la raíz del proyecto, en tu archivo .env, añade:
-     SUPABASE_SERVICE_ROLE_KEY=eyJ... (esa clave)
-   (Ya debes tener EXPO_PUBLIC_SUPABASE_URL y EXPO_PUBLIC_SUPABASE_ANON_KEY.)
-3) En la terminal del proyecto:
-     npm run demo:workers
-
-El script crea usuarios + filas en public.personal e imprime correo y contraseña.
+Alta manual (recomendada para entorno actual)
+---------------------------------------------
+1) En Supabase → Authentication → Add user crea cada cuenta.
+2) Usa estos correos y contraseña.
+3) Ejecuta `02_enlazar_personal_demo.sql` para asignar roles en `public.personal`.
 
 Correos fijos (misma contraseña para todas: DemoftRoles1)
 ---------------------------------------------------------

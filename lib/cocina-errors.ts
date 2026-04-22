@@ -1,6 +1,9 @@
 export function mapCocinaRpcError(message: string): string {
   if (message.includes('sin_mesa_para_pedidos')) {
-    return 'Solo puedes pedir cuando estás en mesa tras tu reserva (mesa ocupada).';
+    return 'Solo puedes pedir cuando estás sentado en una mesa ocupada (por reserva o por asignación de fila).';
+  }
+  if (message.includes('sin_mesa_activa_para_terminar')) {
+    return 'No tienes una mesa activa para terminar el servicio.';
   }
   if (message.includes('item_no_disponible')) return 'Ese plato no está disponible ahora.';
   if (message.includes('item_no_encontrado')) return 'Plato no encontrado.';

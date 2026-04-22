@@ -58,7 +58,7 @@ La **fuente de verdad** es la base de datos; la app solo orquesta permisos y exp
 ## Requisitos
 
 - **Node.js** (LTS) y **npm**
-- Proyecto **Supabase** con el esquema aplicado: ver `supabase/EJECUCION.txt`
+- Proyecto **Supabase** con el esquema aplicado: ver `supabase/00_EJECUCION.txt`
 - Archivo **`.env`** con `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY` (plantilla: `.env.example`). La *service role* solo en máquina local para scripts administrativos, nunca en builds públicos.
 
 ---
@@ -72,7 +72,7 @@ cp .env.example .env
 npm start
 ```
 
-Cuentas demo del personal: `supabase/DEMO_CUENTAS.txt` · scripts `npm run demo:workers` y `npm run staff:console` (requieren `SUPABASE_SERVICE_ROLE_KEY` en local).
+Cuentas demo del personal: `supabase/02_DEMO_CUENTAS.txt` · script `npm run staff:console`.
 
 ---
 
@@ -81,7 +81,6 @@ Cuentas demo del personal: `supabase/DEMO_CUENTAS.txt` · scripts `npm run demo:
 | Comando | Descripción |
 |---------|-------------|
 | `npm start` | Desarrollo (Expo) |
-| `npm run demo:workers` | Alta de usuarios demo de personal |
 | `npm run staff:console` | Consola local para gestionar fichas de personal |
 
 ---
@@ -91,8 +90,8 @@ Cuentas demo del personal: `supabase/DEMO_CUENTAS.txt` · scripts `npm run demo:
 | Recurso | Contenido |
 |---------|-----------|
 | `supabase/01_reconstruir_db.sql` | Esquema completo (nuevas instalaciones) |
-| `supabase/EJECUCION.txt` | Orden de ejecución y parches |
-| `supabase/GUIA_ALTERAR_DB.txt` | Guía para alterar el esquema con cuidado |
+| `supabase/00_EJECUCION.txt` | Orden de ejecución y scripts |
+| `supabase/01_GUIA_ALTERAR_DB.txt` | Guía para alterar el esquema con cuidado |
 
 ---
 
