@@ -1,3 +1,5 @@
+import { Image } from 'expo-image';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,13 +12,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { Image } from 'expo-image';
 
 import { ComensalGreetingLine } from '@/components/comensal-greeting-line';
 import { ReservationModal } from '@/components/reservation-modal';
-import { useAuth } from '@/contexts/auth-context';
 import { Comensal } from '@/constants/theme-comensal';
+import { useAuth } from '@/contexts/auth-context';
 import { REALTIME_TABLES_SCREEN, useSupabaseRealtimeRefresh } from '@/hooks/use-supabase-realtime-refresh';
 import { supabase } from '@/lib/supabase';
 import { tableImageUrl } from '@/lib/table-image';

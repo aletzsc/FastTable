@@ -60,26 +60,45 @@ export default function QueueScreen() {
       }
     }
 
-    const { data: waiting, error: wErr } = await supabase
-      .from('fila_espera')
-      .select('id, id_usuario, unido_en')
-      .eq('estado', 'esperando')
-      .order('unido_en', { ascending: true });
-    if (wErr) {
-      Alert.alert('Fila', wErr.message);
-      setPosition(null);
-      setMyEntryId(null);
+    const { data: minePosition, error: posErr } = await supabase.rpc('comensal_mi_posicion_fila');
+    if (posErr) {
+      const missingFunction = posErr.code === '42883';
+      if (!missingFunction) {
+        Alert.alert('Fila', posErr.message);
+      }
+      // Fallback legacy para instalaciones sin la RPC nueva.
+      const { data: waiting, error: wErr } = await supabase
+        .from('fila_espera')
+        .select('id, id_usuario, unido_en')
+        .eq('estado', 'esperando')
+        .order('unido_en', { ascending: true });
+      if (wErr) {
+        Alert.alert('Fila', wErr.message);
+        setPosition(null);
+        setMyEntryId(null);
+        return;
+      }
+      const list = waiting ?? [];
+      const mine = list.find((e) => e.id_usuario === user.id);
+      setMyEntryId(mine?.id ?? null);
+      if (mine) {
+        const idx = list.findIndex((e) => e.id === mine.id);
+        setPosition(idx >= 0 ? idx + 1 : null);
+      } else {
+        setPosition(null);
+      }
       return;
     }
-    const list = waiting ?? [];
-    const mine = list.find((e) => e.id_usuario === user.id);
-    setMyEntryId(mine?.id ?? null);
-    if (mine) {
-      const idx = list.findIndex((e) => e.id === mine.id);
-      setPosition(idx >= 0 ? idx + 1 : null);
-    } else {
-      setPosition(null);
-    }
+
+    const rpcRow = Array.isArray(minePosition) ? minePosition[0] : minePosition;
+    const rpcPosition =
+      typeof rpcRow?.queue_position === 'number'
+        ? rpcRow.queue_position
+        : typeof rpcRow?.position === 'number'
+          ? rpcRow.position
+          : null;
+    setMyEntryId(rpcRow?.entry_id ?? null);
+    setPosition(rpcPosition);
   }, [user?.id]);
 
   useFocusEffect(
