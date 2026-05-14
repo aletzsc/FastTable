@@ -94,10 +94,33 @@ export type Database = {
           descripcion: string | null;
           precio_centavos: number;
           disponible: boolean;
+          sin_stock: boolean;
           imagen_url: string | null;
           alergenos_json: unknown;
           creado_en: string;
           actualizado_en: string;
+        };
+      };
+      ingredientes: {
+        Row: {
+          id: string;
+          nombre: string;
+          cantidad_disponible: number;
+          unidad_medida: string;
+          stock_minimo: number | null;
+          creado_en: string;
+          actualizado_en: string;
+        };
+      };
+      movimientos_almacen: {
+        Row: {
+          id: string;
+          id_ingrediente: string;
+          tipo: 'entrada' | 'salida_pedido' | 'ajuste';
+          delta_cantidad: number;
+          id_pedido_cocina: string | null;
+          nota: string | null;
+          creado_en: string;
         };
       };
       pedidos_cocina: {
@@ -178,6 +201,7 @@ export type Database = {
       rol_personal: 'anfitrion' | 'mesero' | 'gerente' | 'cocina';
       ciclo_reserva: 'activa' | 'cancelada' | 'completada';
       estado_pedido_cocina: 'pendiente' | 'listo';
+      tipo_movimiento_almacen: 'entrada' | 'salida_pedido' | 'ajuste';
     };
   };
 };

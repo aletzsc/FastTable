@@ -73,9 +73,10 @@ export function mapStaffRpcError(message: string): string {
   if (message.includes('fila_no_esperando')) return 'Ese comensal ya no está esperando en fila.';
   if (message.includes('mesa_no_libre')) return 'La mesa ya no está disponible.';
   if (message.includes('mesero_inactivo_o_inexistente')) return 'El mesero seleccionado no está activo.';
-  if (message.includes('mesa_no_reservada')) return 'La mesa ya no está en estado reservada.';
+  if (message.includes('mesa_ocupada')) return 'La mesa está ocupada en este momento.';
+  if (message.includes('mesa_no_reservada')) return 'La mesa no está en estado válido para esta acción.';
   if (message.includes('no_tu_mesa')) return 'Esta mesa no está asignada a ti.';
-  if (message.includes('solo_reservada_desasignar')) return 'Solo puedes dejar de atender mesas reservadas.';
+  if (message.includes('solo_reservada_desasignar')) return 'No puedes dejar de atender en este estado de la mesa.';
   if (message.includes('solo_ocupada_liberar')) return 'Solo puedes liberar mesas ocupadas que te correspondan.';
   if (message.includes('mesa_en_reserva_panel')) return 'Esa mesa está reservada; gestiónala desde reservas.';
   if (message.includes('solo_libre_a_ocupada')) return 'Solo puedes ocupar mesas libres.';

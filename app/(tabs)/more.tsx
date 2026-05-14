@@ -1,17 +1,27 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import {
+  Alert,
+  InteractionManager,
+  Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { useAuth } from '@/contexts/auth-context';
 import { Comensal } from '@/constants/theme-comensal';
 import { supabase } from '@/lib/supabase';
 
 export default function MoreScreen() {
-  const router = useRouter();
   const { user, profile, signOut } = useAuth();
   const [issueTitle, setIssueTitle] = useState('');
   const [issueDetail, setIssueDetail] = useState('');
   const [sending, setSending] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const onReportIssue = async () => {
     if (!user?.id) return;
@@ -42,13 +52,40 @@ export default function MoreScreen() {
     }
   };
 
-  const onSignOut = async () => {
-    await signOut();
-    router.replace('/');
+  const onSignOut = () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    Keyboard.dismiss();
+
+    const run = async () => {
+      try {
+        // iOS: no desmontar el árbol de tabs en el mismo tick del toque (ScrollView + TextInput + Redirect).
+        if (Platform.OS === 'ios') {
+          await new Promise<void>((resolve) => {
+            InteractionManager.runAfterInteractions(() => {
+              requestAnimationFrame(() => resolve());
+            });
+          });
+        }
+        await signOut();
+      } catch {
+        setSigningOut(false);
+      }
+    };
+
+    if (Platform.OS === 'ios') {
+      setTimeout(() => void run(), 0);
+    } else {
+      void run();
+    }
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive">
       <Text style={styles.eyebrow}>Cuenta y soporte</Text>
       <Text style={styles.title}>Más opciones</Text>
 
@@ -69,6 +106,7 @@ export default function MoreScreen() {
           placeholder="Describe lo ocurrido..."
           placeholderTextColor={Comensal.textMuted}
           multiline
+          scrollEnabled={false}
           style={[styles.input, styles.textarea]}
           maxLength={700}
         />
@@ -79,8 +117,11 @@ export default function MoreScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Sesión</Text>
-        <Pressable style={styles.ghostBtn} onPress={onSignOut}>
-          <Text style={styles.ghostBtnText}>Cerrar sesión</Text>
+        <Pressable
+          style={[styles.ghostBtn, signingOut && styles.btnDisabled]}
+          onPress={onSignOut}
+          disabled={signingOut}>
+          <Text style={styles.ghostBtnText}>{signingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}</Text>
         </Pressable>
       </View>
     </ScrollView>

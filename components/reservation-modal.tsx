@@ -27,6 +27,8 @@ type Props = {
   tableDescription?: string | null;
   zoneName?: string | null;
   capacity?: number;
+  /** YYYY-MM-DD del calendario de salón; sugiere hora al abrir el modal. */
+  suggestedDayYmd?: string | null;
   onClose: () => void;
   onConfirm: (scheduledAt: Date, partySize: number, note: string) => Promise<void>;
 };
@@ -44,6 +46,7 @@ export function ReservationModal({
   tableDescription,
   zoneName,
   capacity,
+  suggestedDayYmd,
   onClose,
   onConfirm,
 }: Props) {
@@ -61,15 +64,25 @@ export function ReservationModal({
 
   useEffect(() => {
     if (!visible) return;
-    const d = new Date();
-    d.setMinutes(d.getMinutes() + 60);
-    d.setSeconds(0, 0);
-    setWhen(d);
-    setPartySize('2');
+    if (suggestedDayYmd) {
+      const [y, mo, da] = suggestedDayYmd.split('-').map(Number);
+      const min = minFutureDate();
+      const slot = new Date(y, mo - 1, da, 13, 0, 0, 0);
+      const chosen = slot.getTime() > min.getTime() ? slot : new Date(min.getTime() + 15 * 60 * 1000);
+      setWhen(chosen);
+    } else {
+      const d = new Date();
+      d.setMinutes(d.getMinutes() + 60);
+      d.setSeconds(0, 0);
+      setWhen(d);
+    }
+    const cap = capacity != null && capacity > 0 ? capacity : null;
+    const defaultParty = cap != null ? Math.min(2, cap) : 2;
+    setPartySize(String(defaultParty));
     setNote('');
     setShowAndroidDate(false);
     setShowAndroidTime(false);
-  }, [visible]);
+  }, [visible, suggestedDayYmd, capacity]);
 
   const onIosChange = (_e: DateTimePickerEvent, date?: Date) => {
     if (date) setWhen(date);
@@ -95,6 +108,14 @@ export function ReservationModal({
   const submit = async () => {
     const n = parseInt(partySize, 10);
     if (Number.isNaN(n) || n < 1) return;
+    const cap = capacity != null && capacity > 0 ? capacity : null;
+    if (cap != null && n > cap) {
+      Alert.alert(
+        'Capacidad de la mesa',
+        `Esta mesa admite como máximo ${cap} ${cap === 1 ? 'persona' : 'personas'}.`,
+      );
+      return;
+    }
     if (when.getTime() <= Date.now()) {
       Alert.alert('Fecha y hora', 'Elige un momento futuro.');
       return;
@@ -200,6 +221,9 @@ export function ReservationModal({
             )}
 
             <Text style={styles.label}>Personas</Text>
+            {capacity != null && capacity > 0 ? (
+              <Text style={styles.hintBelowLabel}>Máximo {capacity} según la capacidad de la mesa.</Text>
+            ) : null}
             <TextInput
               value={partySize}
               onChangeText={setPartySize}
@@ -217,6 +241,7 @@ export function ReservationModal({
               placeholderTextColor={Comensal.textFaint}
               style={[styles.input, styles.inputMulti]}
               multiline
+              scrollEnabled={false}
             />
 
             <View style={styles.actions}>
@@ -317,6 +342,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 6,
     textTransform: 'uppercase',
+  },
+  hintBelowLabel: {
+    fontSize: 13,
+    color: Comensal.textMuted,
+    marginTop: -4,
+    marginBottom: 8,
   },
   iosPickerShell: {
     overflow: 'hidden',

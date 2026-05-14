@@ -19,8 +19,18 @@ export const REALTIME_KITCHEN = ['pedidos_cocina', 'items_menu'] as const;
 /** Pantalla reservas del personal */
 export const REALTIME_WORKER_RESERVATIONS = ['reservas_mesa', 'mesas'] as const;
 
-/** Panel gerente (stats agregados) */
-export const REALTIME_GERENTE = ['pedidos_cocina', 'items_menu', 'personal', 'reportes_problema'] as const;
+/** Panel gerente (stats agregados + inventario cuando aplica) */
+export const REALTIME_GERENTE = [
+  'pedidos_cocina',
+  'items_menu',
+  'personal',
+  'reportes_problema',
+  'ingredientes',
+  'movimientos_almacen',
+] as const;
+
+/** Pantalla gerente — inventario (tablas de `05_inventario.sql`) */
+export const REALTIME_INVENTARIO = ['ingredientes', 'movimientos_almacen', 'items_menu'] as const;
 
 /** Comensal — mesas en pestaña Salón (+ reservas propias) */
 export const REALTIME_TABLES_SCREEN = ['mesas', 'reservas_mesa'] as const;

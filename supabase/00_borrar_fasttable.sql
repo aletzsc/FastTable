@@ -19,6 +19,7 @@ DROP FUNCTION IF EXISTS public.tr_reservas_mesa_set_atencion() CASCADE;
 DROP FUNCTION IF EXISTS public.create_table_reservation(uuid, timestamptz, int, text) CASCADE;
 DROP FUNCTION IF EXISTS public.cancel_table_reservation(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.waiter_resolve_reservation(uuid, boolean) CASCADE;
+DROP FUNCTION IF EXISTS public.mesas_con_reserva_activa_en_dia_servicio(date) CASCADE;
 DROP FUNCTION IF EXISTS public.crear_reserva_mesa(uuid, timestamptz, int, text) CASCADE;
 DROP FUNCTION IF EXISTS public.cancelar_reserva_mesa(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.personal_resolver_reserva(uuid, boolean) CASCADE;
@@ -33,6 +34,19 @@ DROP FUNCTION IF EXISTS public.marcar_pedido_listo_cocina(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.cocina_set_item_disponible(uuid, boolean) CASCADE;
 DROP FUNCTION IF EXISTS public.personal_atender_reserva_completa(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.personal_marcar_mesa_libre_ocupada(uuid, boolean) CASCADE;
+
+DROP FUNCTION IF EXISTS public.gerente_almacen_entrada(uuid, numeric, text) CASCADE;
+DROP FUNCTION IF EXISTS public.gerente_almacen_ajuste(uuid, numeric, text) CASCADE;
+DROP FUNCTION IF EXISTS public.refresh_items_menu_sin_stock_flags() CASCADE;
+DROP FUNCTION IF EXISTS public.es_gerente() CASCADE;
+DROP FUNCTION IF EXISTS public.tr_ingredientes_actualizado() CASCADE;
+
+DROP TABLE IF EXISTS public.movimientos_almacen CASCADE;
+DROP TABLE IF EXISTS public.receta_ingredientes CASCADE;
+DROP TABLE IF EXISTS public.recetas CASCADE;
+DROP TABLE IF EXISTS public.ingredientes CASCADE;
+
+DROP TYPE IF EXISTS public.tipo_movimiento_almacen CASCADE;
 
 -- Tablas (nombres en inglés antiguos + español)
 DROP TABLE IF EXISTS public.pedidos_cocina CASCADE;

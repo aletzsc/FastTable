@@ -31,6 +31,7 @@ type Item = {
   descripcion: string | null;
   precio_centavos: number;
   disponible: boolean;
+  sin_stock?: boolean;
   imagen_url: string | null;
 };
 
@@ -78,7 +79,7 @@ export default function MenuScreen() {
     setError(null);
     const { data, error: qError } = await supabase
       .from('categorias_menu')
-      .select('id, nombre, orden, items_menu ( id, nombre, descripcion, precio_centavos, disponible, imagen_url )')
+      .select('id, nombre, orden, items_menu ( id, nombre, descripcion, precio_centavos, disponible, sin_stock, imagen_url )')
       .order('orden');
     if (qError) {
       setError(qError.message);
@@ -118,7 +119,8 @@ export default function MenuScreen() {
   useSupabaseRealtimeRefresh(REALTIME_MENU_COMENSAL, reloadMenuTab, true);
 
   const openModal = (item: Item) => {
-    if (!item.disponible) return;
+    const blocked = !item.disponible || !!item.sin_stock;
+    if (blocked) return;
     if (!mesaActiva) {
       Alert.alert(
         'Mesa',
@@ -244,12 +246,14 @@ export default function MenuScreen() {
       {sections.map((section) => (
         <View key={section.id} style={styles.section}>
           <Text style={styles.sectionTitle}>{section.nombre}</Text>
-          {(section.items_menu ?? []).map((item) => (
+          {(section.items_menu ?? []).map((item) => {
+            const blocked = !item.disponible || !!item.sin_stock;
+            return (
             <Pressable
               key={item.id}
-              style={[styles.row, !item.disponible && styles.rowDisabled]}
+              style={[styles.row, blocked && styles.rowDisabled]}
               onPress={() => openModal(item)}
-              disabled={!item.disponible}>
+              disabled={blocked}>
               <Image
                 source={{ uri: item.imagen_url || placeholderImage(item.id) }}
                 style={styles.thumb}
@@ -260,10 +264,12 @@ export default function MenuScreen() {
                 <Text style={styles.itemName}>{item.nombre}</Text>
                 {item.descripcion ? <Text style={styles.itemDesc} numberOfLines={2}>{item.descripcion}</Text> : null}
                 {!item.disponible ? <Text style={styles.unavailable}>No disponible</Text> : null}
+                {item.disponible && item.sin_stock ? <Text style={styles.unavailable}>Sin stock</Text> : null}
               </View>
               <Text style={styles.price}>{formatPriceFromCents(item.precio_centavos)}</Text>
             </Pressable>
-          ))}
+          );
+          })}
         </View>
       ))}
 

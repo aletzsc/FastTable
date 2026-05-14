@@ -195,6 +195,8 @@ export default function QueueScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -241,6 +243,7 @@ export default function QueueScreen() {
           placeholder="Ej. silla para niño, alergias…"
           placeholderTextColor={Comensal.textMuted}
           multiline
+          scrollEnabled={false}
           style={[styles.input, styles.inputMulti]}
         />
       </View>

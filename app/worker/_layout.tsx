@@ -18,6 +18,7 @@ export default function WorkerLayout() {
       <Stack.Screen name="reservations" options={{ title: 'Reservas y mesas' }} />
       <Stack.Screen name="kitchen" options={{ title: 'Cocina', headerShown: false }} />
       <Stack.Screen name="gerente" options={{ title: 'Gerencia', headerShown: false }} />
+      <Stack.Screen name="inventario" options={{ title: 'Inventario' }} />
     </Stack>
     </SafeAreaProvider>
   );

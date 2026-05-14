@@ -73,6 +73,8 @@ export default function ServiceScreen() {
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -104,6 +106,7 @@ export default function ServiceScreen() {
           placeholder="Ej. traer agua, cuenta, cubiertos…"
           placeholderTextColor={Comensal.textMuted}
           multiline
+          scrollEnabled={false}
           style={[styles.input, styles.inputMulti]}
         />
       </View>

@@ -11,5 +11,14 @@ export function mapCocinaRpcError(message: string): string {
   if (message.includes('solo_cocina')) return 'Solo personal de cocina o gerencia.';
   if (message.includes('pedido_ya_procesado')) return 'Este pedido ya fue marcado.';
   if (message.includes('pedido_no_encontrado')) return 'Pedido no encontrado.';
+  if (message.includes('item_sin_stock')) return 'Ese plato no tiene stock en almacén por ahora.';
+  if (message.includes('item_sin_receta')) return 'El plato no tiene receta de inventario configurada.';
+  if (message.includes('inventario_insuficiente')) {
+    const idx = message.indexOf(':');
+    const detail = idx >= 0 ? message.slice(idx + 1).trim() : '';
+    return detail.length > 0
+      ? `No alcanza el inventario para preparar ese pedido: ${detail}`
+      : 'No alcanza el inventario para preparar ese pedido.';
+  }
   return message;
 }

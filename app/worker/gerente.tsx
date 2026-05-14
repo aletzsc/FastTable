@@ -499,6 +499,12 @@ export default function GerenteScreen() {
           )}
         </View>
 
+        <Pressable style={styles.linkKitchen} onPress={() => router.push('/worker/inventario')}>
+          <Ionicons name="cube-outline" size={18} color={FtColors.accent} />
+          <Text style={styles.linkKitchenText}>Inventario y almacén (solo gerente)</Text>
+          <Ionicons name="chevron-forward" size={18} color={FtColors.textMuted} />
+        </Pressable>
+
         <Pressable style={styles.linkKitchen} onPress={() => router.push('/worker/kitchen')}>
           <Ionicons name="restaurant-outline" size={18} color={FtColors.accent} />
           <Text style={styles.linkKitchenText}>Abrir cocina (mismo acceso que gerente)</Text>
