@@ -129,6 +129,8 @@ export type Database = {
           id_mesa: string;
           id_usuario: string;
           id_item_menu: string;
+          id_reserva_mesa: string | null;
+          id_fila_espera: string | null;
           cantidad: number;
           nota_cliente: string | null;
           estado: 'pendiente' | 'listo';

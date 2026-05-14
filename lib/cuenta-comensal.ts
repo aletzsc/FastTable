@@ -20,16 +20,30 @@ function itemPrecio(raw: unknown): number {
   return (z as { precio_centavos?: number })?.precio_centavos ?? 0;
 }
 
-/** Líneas de pedido del comensal en la mesa activa (RLS: solo filas propias). */
-export async function fetchLineasCuentaComensal(idMesa: string): Promise<{
+/** Líneas de pedido del comensal en la visita actual (misma reserva o mismo turno de fila). */
+export async function fetchLineasCuentaComensal(
+  userId: string,
+  idMesa: string,
+  ctx: { id_reserva_mesa: string | null; id_fila_espera: string | null },
+): Promise<{
   lines: LineaCuenta[];
   total_centavos: number;
 }> {
-  const { data, error } = await supabase
+  let q = supabase
     .from('pedidos_cocina')
     .select('id, cantidad, items_menu ( nombre, precio_centavos )')
     .eq('id_mesa', idMesa)
-    .order('creado_en', { ascending: true });
+    .eq('id_usuario', userId);
+
+  if (ctx.id_reserva_mesa) {
+    q = q.eq('id_reserva_mesa', ctx.id_reserva_mesa);
+  } else if (ctx.id_fila_espera) {
+    q = q.eq('id_fila_espera', ctx.id_fila_espera);
+  } else {
+    return { lines: [], total_centavos: 0 };
+  }
+
+  const { data, error } = await q.order('creado_en', { ascending: true });
 
   if (error || !data) {
     return { lines: [], total_centavos: 0 };

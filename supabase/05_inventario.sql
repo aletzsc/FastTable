@@ -1,5 +1,7 @@
 -- =============================================================================
 -- FastTable — Inventario / recetas / stock (ejecutar en SQL Editor después de 01 y 04)
+-- Si tu proyecto ya existía sin columnas de sesión en pedidos, ejecuta antes
+-- `06_sesion_comensal_cuenta.sql` (o aplica 01 actualizado) y luego este script.
 -- Añade tablas, RLS, RPC gerente, reemplaza crear_pedido_cocina (descuenta stock),
 -- columna items_menu.sin_stock, sincronización de carta, seed de ingredientes y recetas.
 -- =============================================================================
@@ -8,6 +10,27 @@ BEGIN;
 
 ALTER TABLE public.items_menu
   ADD COLUMN IF NOT EXISTS sin_stock boolean NOT NULL DEFAULT false;
+
+ALTER TABLE public.pedidos_cocina
+  ADD COLUMN IF NOT EXISTS id_reserva_mesa uuid REFERENCES public.reservas_mesa (id) ON DELETE SET NULL;
+ALTER TABLE public.pedidos_cocina
+  ADD COLUMN IF NOT EXISTS id_fila_espera uuid REFERENCES public.fila_espera (id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_pedidos_cocina_reserva ON public.pedidos_cocina (id_reserva_mesa) WHERE id_reserva_mesa IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_pedidos_cocina_fila ON public.pedidos_cocina (id_fila_espera) WHERE id_fila_espera IS NOT NULL;
+
+DO $chk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_pedido_origen_sesion' AND conrelid = 'public.pedidos_cocina'::regclass
+  ) THEN
+    ALTER TABLE public.pedidos_cocina
+      ADD CONSTRAINT chk_pedido_origen_sesion CHECK (
+        NOT (id_reserva_mesa IS NOT NULL AND id_fila_espera IS NOT NULL)
+      );
+  END IF;
+END
+$chk$;
 
 DO $enum$
 BEGIN
@@ -259,6 +282,8 @@ AS $function$
 DECLARE
   v_uid uuid := auth.uid();
   v_mesa uuid;
+  v_id_reserva uuid;
+  v_id_fila uuid;
   v_disp boolean;
   v_sin boolean;
   v_id uuid;
@@ -271,7 +296,11 @@ BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'no_autenticado'; END IF;
   IF p_cantidad IS NULL OR p_cantidad < 1 OR p_cantidad > 99 THEN RAISE EXCEPTION 'cantidad_invalida'; END IF;
 
-  SELECT rm.id_mesa INTO v_mesa
+  v_id_reserva := NULL;
+  v_id_fila := NULL;
+  v_mesa := NULL;
+
+  SELECT rm.id_mesa, rm.id INTO v_mesa, v_id_reserva
   FROM public.reservas_mesa rm
   INNER JOIN public.mesas m ON m.id = rm.id_mesa
   WHERE rm.id_usuario = v_uid
@@ -282,7 +311,7 @@ BEGIN
   LIMIT 1;
 
   IF v_mesa IS NULL THEN
-    SELECT f.id_mesa_asignada INTO v_mesa
+    SELECT f.id_mesa_asignada, f.id INTO v_mesa, v_id_fila
     FROM public.fila_espera f
     INNER JOIN public.mesas m ON m.id = f.id_mesa_asignada
     WHERE f.id_usuario = v_uid
@@ -306,14 +335,25 @@ BEGIN
   IF v_disp IS NOT TRUE THEN RAISE EXCEPTION 'item_no_disponible'; END IF;
   IF v_sin IS TRUE THEN RAISE EXCEPTION 'item_sin_stock'; END IF;
 
-  SELECT r.id INTO v_id_receta FROM public.recetas r WHERE r.id_item_menu = p_id_item LIMIT 1;
+  SELECT rx.id INTO v_id_receta FROM public.recetas rx WHERE rx.id_item_menu = p_id_item LIMIT 1;
 
   IF v_id_receta IS NULL THEN
-    INSERT INTO public.pedidos_cocina (id_mesa, id_usuario, id_item_menu, cantidad, nota_cliente, estado)
+    INSERT INTO public.pedidos_cocina (
+      id_mesa,
+      id_usuario,
+      id_item_menu,
+      id_reserva_mesa,
+      id_fila_espera,
+      cantidad,
+      nota_cliente,
+      estado
+    )
     VALUES (
       v_mesa,
       v_uid,
       p_id_item,
+      v_id_reserva,
+      v_id_fila,
       p_cantidad,
       NULLIF(trim(COALESCE(p_nota, '')), ''),
       'pendiente'
@@ -353,11 +393,22 @@ BEGIN
     RAISE EXCEPTION 'inventario_insuficiente: %', v_err;
   END IF;
 
-  INSERT INTO public.pedidos_cocina (id_mesa, id_usuario, id_item_menu, cantidad, nota_cliente, estado)
+  INSERT INTO public.pedidos_cocina (
+    id_mesa,
+    id_usuario,
+    id_item_menu,
+    id_reserva_mesa,
+    id_fila_espera,
+    cantidad,
+    nota_cliente,
+    estado
+  )
   VALUES (
     v_mesa,
     v_uid,
     p_id_item,
+    v_id_reserva,
+    v_id_fila,
     p_cantidad,
     NULLIF(trim(COALESCE(p_nota, '')), ''),
     'pendiente'

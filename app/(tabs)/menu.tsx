@@ -68,7 +68,10 @@ export default function MenuScreen() {
     const m = await fetchMesaActivaComensal(user.id);
     setMesaActiva(m);
     if (m) {
-      const c = await fetchLineasCuentaComensal(m.id_mesa);
+      const c = await fetchLineasCuentaComensal(user.id, m.id_mesa, {
+        id_reserva_mesa: m.id_reserva_mesa,
+        id_fila_espera: m.id_fila_espera,
+      });
       setCuenta(c);
     } else {
       setCuenta(null);

@@ -3,6 +3,10 @@ import { supabase } from '@/lib/supabase';
 export type MesaActiva = {
   id_mesa: string;
   codigo: string;
+  /** Reserva atendida (ciclo completada + en mesa); ancla pedidos a esta visita. */
+  id_reserva_mesa: string | null;
+  /** Fila sentado en mesa; ancla pedidos a esta visita. */
+  id_fila_espera: string | null;
 };
 
 /**
@@ -13,7 +17,7 @@ export type MesaActiva = {
 export async function fetchMesaActivaComensal(userId: string): Promise<MesaActiva | null> {
   const { data, error } = await supabase
     .from('reservas_mesa')
-    .select('id_mesa, mesas ( id, codigo )')
+    .select('id, id_mesa, mesas ( id, codigo )')
     .eq('id_usuario', userId)
     .eq('ciclo', 'completada')
     .eq('comensal_llego', true)
@@ -34,12 +38,17 @@ export async function fetchMesaActivaComensal(userId: string): Promise<MesaActiv
     .maybeSingle();
 
   if (!e2 && row && row.estado === 'ocupada') {
-    return { id_mesa: row.id, codigo: row.codigo };
+    return {
+      id_mesa: row.id,
+      codigo: row.codigo,
+      id_reserva_mesa: data.id as string,
+      id_fila_espera: null,
+    };
   }
 
   const { data: fromQueue, error: qErr } = await supabase
     .from('fila_espera')
-    .select('id_mesa_asignada, mesas:id_mesa_asignada ( id, codigo, estado )')
+    .select('id, id_mesa_asignada, mesas:id_mesa_asignada ( id, codigo, estado )')
     .eq('id_usuario', userId)
     .eq('estado', 'sentado')
     .order('sentado_en', { ascending: false })
@@ -54,5 +63,10 @@ export async function fetchMesaActivaComensal(userId: string): Promise<MesaActiv
   const mesaQueue = Array.isArray(mq) ? mq[0] : mq;
   if (!mesaQueue?.id || mesaQueue.estado !== 'ocupada') return null;
 
-  return { id_mesa: mesaQueue.id, codigo: mesaQueue.codigo };
+  return {
+    id_mesa: mesaQueue.id,
+    codigo: mesaQueue.codigo,
+    id_reserva_mesa: null,
+    id_fila_espera: fromQueue.id as string,
+  };
 }
